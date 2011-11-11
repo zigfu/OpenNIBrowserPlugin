@@ -17,7 +17,7 @@ file (GLOB GENERAL RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
 include_directories(${PLUGIN_INCLUDE_DIRS}
-					"C:\Program Files (x86)\OpenNI\Include"
+					"C:\\Program Files (x86)\\OpenNI\\Include"
 					)
 
 # Generated files are stored in ${GENERATED} by the project configuration

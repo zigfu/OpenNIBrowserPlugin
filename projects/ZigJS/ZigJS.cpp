@@ -10,7 +10,7 @@
 #include "ZigJSAPI.h"
 
 #include "ZigJS.h"
-struct shit_t {
+struct zig_t {
 	int * frameId;
 	xn::Context * context;
 	xn::DepthGenerator * depth;
@@ -19,11 +19,11 @@ struct shit_t {
 
 extern "C" unsigned long __stdcall threadproc(void * ptr)
 {
-	shit_t * data = (shit_t *)ptr;
+	zig_t * data = (zig_t *)ptr;
 	int * frameId = data->frameId;
-	xn::Context *shit = data->context;
+	xn::Context *zig = data->context;
 	xn::DepthGenerator * depth = data->depth;
-	XnStatus nRetVal = shit->StartGeneratingAll();
+	XnStatus nRetVal = zig->StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
 		*frameId = -1;
@@ -34,7 +34,7 @@ extern "C" unsigned long __stdcall threadproc(void * ptr)
 	xn::DepthMetaData md;
 	
 	while(true) {
-		shit->WaitAndUpdateAll();
+		zig->WaitAndUpdateAll();
 		if (nRetVal != XN_STATUS_OK) {
 			FBLOG_INFO("xnInit", "fail wait & update");
 			*frameId = -111;
@@ -104,7 +104,7 @@ ZigJS::ZigJS()
 		FBLOG_INFO("xnInit", "ok get depth");
 	}
 	XN_THREAD_HANDLE handle;
-	shit_t *data = new shit_t;
+	zig_t *data = new zig_t;
 	data->frameId = &m_lastFrame;
 	data->context = &m_context;
 	data->depth = &m_depth;

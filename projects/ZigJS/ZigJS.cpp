@@ -1,15 +1,15 @@
 /**********************************************************\
 
-  Auto-generated shitshit.cpp
+  Auto-generated ZigJS.cpp
 
   This file contains the auto-generated main plugin object
   implementation for the awesome project
 
 \**********************************************************/
 
-#include "shitshitAPI.h"
+#include "ZigJSAPI.h"
 
-#include "shitshit.h"
+#include "ZigJS.h"
 struct shit_t {
 	int * frameId;
 	xn::Context * context;
@@ -47,37 +47,37 @@ extern "C" unsigned long __stdcall threadproc(void * ptr)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @fn shitshit::StaticInitialize()
+/// @fn ZigJS::StaticInitialize()
 ///
 /// @brief  Called from PluginFactory::globalPluginInitialize()
 ///
 /// @see FB::FactoryBase::globalPluginInitialize
 ///////////////////////////////////////////////////////////////////////////////
-void shitshit::StaticInitialize()
+void ZigJS::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @fn shitshit::StaticInitialize()
+/// @fn ZigJS::StaticInitialize()
 ///
 /// @brief  Called from PluginFactory::globalPluginDeinitialize()
 ///
 /// @see FB::FactoryBase::globalPluginDeinitialize
 ///////////////////////////////////////////////////////////////////////////////
-void shitshit::StaticDeinitialize()
+void ZigJS::StaticDeinitialize()
 {
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief  shitshit constructor.  Note that your API is not available
+/// @brief  ZigJS constructor.  Note that your API is not available
 ///         at this point, nor the window.  For best results wait to use
 ///         the JSAPI object until the onPluginReady method is called
 ///////////////////////////////////////////////////////////////////////////////
-shitshit::shitshit()
+ZigJS::ZigJS()
 {
 	m_lastFrame = -1337;
 	XnStatus nRetVal = XN_STATUS_OK;
@@ -119,9 +119,9 @@ shitshit::shitshit()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief  shitshit destructor.
+/// @brief  ZigJS destructor.
 ///////////////////////////////////////////////////////////////////////////////
-shitshit::~shitshit()
+ZigJS::~ZigJS()
 {
     // This is optional, but if you reset m_api (the shared_ptr to your JSAPI
     // root object) and tell the host to free the retained JSAPI objects then
@@ -131,7 +131,7 @@ shitshit::~shitshit()
     m_host->freeRetainedObjects();
 }
 
-void shitshit::onPluginReady()
+void ZigJS::onPluginReady()
 {
     // When this is called, the BrowserHost is attached, the JSAPI object is
     // created, and we are ready to interact with the page and such.  The
@@ -139,7 +139,7 @@ void shitshit::onPluginReady()
     // this point.
 }
 
-void shitshit::shutdown()
+void ZigJS::shutdown()
 {
     // This will be called when it is time for the plugin to shut down;
     // any threads or anything else that may hold a shared_ptr to this
@@ -154,46 +154,46 @@ void shitshit::shutdown()
 ///
 /// Note that m_host is your BrowserHost and shared_ptr returns a
 /// FB::PluginCorePtr, which can be used to provide a
-/// boost::weak_ptr<shitshit> for your JSAPI class.
+/// boost::weak_ptr<ZigJS> for your JSAPI class.
 ///
 /// Be very careful where you hold a shared_ptr to your plugin class from,
 /// as it could prevent your plugin class from getting destroyed properly.
 ///////////////////////////////////////////////////////////////////////////////
-FB::JSAPIPtr shitshit::createJSAPI()
+FB::JSAPIPtr ZigJS::createJSAPI()
 {
     // m_host is the BrowserHost
-    return boost::make_shared<shitshitAPI>(FB::ptr_cast<shitshit>(shared_from_this()), m_host);
+    return boost::make_shared<ZigJSAPI>(FB::ptr_cast<ZigJS>(shared_from_this()), m_host);
 }
 
-bool shitshit::onMouseDown(FB::MouseDownEvent *evt, FB::PluginWindow *)
+bool ZigJS::onMouseDown(FB::MouseDownEvent *evt, FB::PluginWindow *)
 {
     //printf("Mouse down at: %d, %d\n", evt->m_x, evt->m_y);
     return false;
 }
 
-bool shitshit::onMouseUp(FB::MouseUpEvent *evt, FB::PluginWindow *)
+bool ZigJS::onMouseUp(FB::MouseUpEvent *evt, FB::PluginWindow *)
 {
     //printf("Mouse up at: %d, %d\n", evt->m_x, evt->m_y);
     return false;
 }
 
-bool shitshit::onMouseMove(FB::MouseMoveEvent *evt, FB::PluginWindow *)
+bool ZigJS::onMouseMove(FB::MouseMoveEvent *evt, FB::PluginWindow *)
 {
     //printf("Mouse move at: %d, %d\n", evt->m_x, evt->m_y);
     return false;
 }
-bool shitshit::onWindowAttached(FB::AttachedEvent *evt, FB::PluginWindow *)
+bool ZigJS::onWindowAttached(FB::AttachedEvent *evt, FB::PluginWindow *)
 {
     // The window is attached; act appropriately
     return false;
 }
 
-bool shitshit::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
+bool ZigJS::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
 {
     // The window is about to be detached; act appropriately
     return false;
 }
 
-int shitshit::getLastFrameID() {
+int ZigJS::getLastFrameID() {
 	return m_lastFrame;
 }

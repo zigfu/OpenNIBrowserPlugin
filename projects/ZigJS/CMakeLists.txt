@@ -1,6 +1,6 @@
 #/**********************************************************\ 
 # 
-# Auto-generated CMakeLists.txt for the awesome project
+# Auto-generated CMakeLists.txt for the ZigJS project
 #
 #\**********************************************************/
 
@@ -17,7 +17,7 @@ file (GLOB GENERAL RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
 include_directories(${PLUGIN_INCLUDE_DIRS}
-					"C:\\Program Files (x86)\\OpenNI\\Include"
+					$ENV{OPEN_NI_INCLUDE}
 					)
 
 # Generated files are stored in ${GENERATED} by the project configuration

@@ -1,13 +1,13 @@
 /**********************************************************\
 
-  Auto-generated shitshit.h
+  Auto-generated ZigJS.h
 
   This file contains the auto-generated main plugin object
   implementation for the awesome project
 
 \**********************************************************/
-#ifndef H_shitshitPLUGIN
-#define H_shitshitPLUGIN
+#ifndef H_ZigJSPLUGIN
+#define H_ZigJSPLUGIN
 
 #include "PluginWindow.h"
 #include "PluginEvents/MouseEvents.h"
@@ -20,8 +20,8 @@
 #include <XnCppWrapper.h>
 
 
-FB_FORWARD_PTR(shitshit)
-class shitshit : public FB::PluginCore
+FB_FORWARD_PTR(ZigJS)
+class ZigJS : public FB::PluginCore
 {
 protected:
 	xn::Context m_context;
@@ -33,8 +33,8 @@ public:
     static void StaticDeinitialize();
 
 public:
-    shitshit();
-    virtual ~shitshit();
+    ZigJS();
+    virtual ~ZigJS();
 
 public:
     void onPluginReady();

@@ -3,12 +3,12 @@
  Auto-generated Factory.cpp
  
  This file contains the auto-generated factory methods 
- for the shitshit project
+ for the ZigJS project
  
 \**********************************************************/
 
 #include "FactoryBase.h"
-#include "shitshit.h"
+#include "ZigJS.h"
 #include <boost/make_shared.hpp>
 
 class PluginFactory : public FB::FactoryBase
@@ -22,7 +22,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////////
     FB::PluginCorePtr createPlugin(const std::string& mimetype)
     {
-        return boost::make_shared<shitshit>();
+        return boost::make_shared<ZigJS>();
     }
     
     ///////////////////////////////////////////////////////////////////////////////
@@ -30,7 +30,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////////
     void globalPluginInitialize()
     {
-        shitshit::StaticInitialize();
+        ZigJS::StaticInitialize();
     }
     
     ///////////////////////////////////////////////////////////////////////////////
@@ -38,18 +38,8 @@ public:
     ///////////////////////////////////////////////////////////////////////////////
     void globalPluginDeinitialize()
     {
-        shitshit::StaticDeinitialize();
+        ZigJS::StaticDeinitialize();
     }
-
-	
-	virtual void getLoggingMethods( FB::Log::LogMethodList& outMethods )
-	{
- 
-		// The next line will enable logging to a logfile.
-		outMethods.push_back(std::make_pair(FB::Log::LogMethod_File, "D:\\testplugin.log"));
- 
-		// Obviously, if you use both lines, you will get output on both sinks.
-	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////

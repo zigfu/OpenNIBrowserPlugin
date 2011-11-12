@@ -1,6 +1,6 @@
 /**********************************************************\
 
-  Auto-generated shitshitAPI.h
+  Auto-generated ZigJSAPI.h
 
 \**********************************************************/
 
@@ -9,18 +9,18 @@
 #include <boost/weak_ptr.hpp>
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
-#include "shitshit.h"
+#include "ZigJS.h"
 
-#ifndef H_shitshitAPI
-#define H_shitshitAPI
+#ifndef H_ZigJSAPI
+#define H_ZigJSAPI
 
-class shitshitAPI : public FB::JSAPIAuto
+class ZigJSAPI : public FB::JSAPIAuto
 {
 public:
-    shitshitAPI(const shitshitPtr& plugin, const FB::BrowserHostPtr& host);
-    virtual ~shitshitAPI();
+    ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host);
+    virtual ~ZigJSAPI();
 
-    shitshitPtr getPlugin();
+    ZigJSPtr getPlugin();
 
     // Read/Write property ${PROPERTY.ident}
     std::string get_testString();
@@ -41,11 +41,11 @@ public:
     void testEvent(const FB::variant& s);
 
 private:
-    shitshitWeakPtr m_plugin;
+    ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
 
     std::string m_testString;
 };
 
-#endif // H_shitshitAPI
+#endif // H_ZigJSAPI
 

@@ -12,6 +12,8 @@
 #include "ZigJSAPI.h"
 #include <boost/format.hpp>
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr host)
 ///
@@ -22,6 +24,13 @@
 /// @see FB::JSAPIAuto::registerProperty
 /// @see FB::JSAPIAuto::registerEvent
 ///////////////////////////////////////////////////////////////////////////////
+
+
+void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
+{
+	((ZigJSAPI*)pCookie)->fire_WaveGesture(pEndPosition->X,pEndPosition->Y,pEndPosition->Z);
+}
+
 ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host)
 {
     registerMethod("echo",      make_method(this, &ZigJSAPI::echo));
@@ -38,8 +47,13 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
                      make_property(this,
                         &ZigJSAPI::get_version));
 
+	
+	XnCallbackHandle hGesture;
+	plugin->m_gestures.RegisterGestureCallbacks(GestureRecognizedHandler, NULL, this, hGesture);
 
 }
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJSAPI::~ZigJSAPI()
@@ -51,6 +65,7 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 ZigJSAPI::~ZigJSAPI()
 {
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJSPtr ZigJSAPI::getPlugin()

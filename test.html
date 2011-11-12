@@ -126,7 +126,10 @@
             var el = $("#" + id);
             el.html(el.attr("text") + " failed!").addClass("failed").removeClass("passed");
         }
-
+		function onWaveGesture()
+		{
+			alert("Wave Gesture!");
+		}
         function pageLoaded() {
             addTest("loaded", "Plugin onload event");
             addTest("valid", "Plugin valid test");
@@ -147,8 +150,12 @@
             addTest("applytest", "Function.apply method");
             markFailed("loaded");
             injectPlugin($("#pluginContainer"), pluginLoaded);
-        }
+		
+			document.getElementById("testPlugin").addEventListener("WaveGesture", onWaveGesture, false);
 
+        }
+		
+ 
         function pluginLoaded() {
             markPassed("loaded");
             $("#pluginContainer").css("border", "1px solid black");
@@ -522,9 +529,11 @@
             return fn;
         }
 
+	
         $(document).ready(pageLoaded);
 
     </script>
+
 </head>
 <body>
     <div class="header">

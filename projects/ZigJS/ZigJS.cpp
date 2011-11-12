@@ -14,7 +14,13 @@ struct zig_t {
 	int * frameId;
 	xn::Context * context;
 	xn::DepthGenerator * depth;
+	xn::HandsGenerator * hands;
+	xn::GestureGenerator * gestures;
 };
+
+
+
+
 
 
 extern "C" unsigned long __stdcall threadproc(void * ptr)
@@ -23,6 +29,9 @@ extern "C" unsigned long __stdcall threadproc(void * ptr)
 	int * frameId = data->frameId;
 	xn::Context *zig = data->context;
 	xn::DepthGenerator * depth = data->depth;
+	
+	data->gestures->AddGesture ("Wave",  NULL); //no bounding box
+
 	XnStatus nRetVal = zig->StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
@@ -59,6 +68,8 @@ void ZigJS::StaticInitialize()
     // be called once per process
 }
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJS::StaticInitialize()
 ///
@@ -71,6 +82,8 @@ void ZigJS::StaticDeinitialize()
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
 }
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief  ZigJS constructor.  Note that your API is not available
@@ -95,6 +108,7 @@ ZigJS::ZigJS()
 	xnOSStrCopy(license->strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(license->strKey));
 	xnOSStrCopy(license->strVendor, "PrimeSense", sizeof(license->strVendor));
 	m_context.AddLicense(*license);
+
 	m_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, m_depth);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail get depth");
@@ -103,11 +117,40 @@ ZigJS::ZigJS()
 	} else {
 		FBLOG_INFO("xnInit", "ok get depth");
 	}
+	
+	m_context.CreateAnyProductionTree(XN_NODE_TYPE_GESTURE, NULL, m_gestures);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_INFO("xnInit", "fail get gesture");
+		m_lastFrame = -6;
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok get gesture");
+	}
+	
+	m_context.CreateAnyProductionTree(XN_NODE_TYPE_HANDS, NULL, m_hands);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_INFO("xnInit", "fail get hands");
+		m_lastFrame = -6;
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok get hands");
+	}
+
+
 	XN_THREAD_HANDLE handle;
 	zig_t *data = new zig_t;
 	data->frameId = &m_lastFrame;
 	data->context = &m_context;
 	data->depth = &m_depth;
+	data->gestures = &m_gestures;
+	data->hands = &m_hands;
+	
+	
+	
+
+
+
+
 	nRetVal = xnOSCreateThread(threadproc, data, &handle);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start thread");

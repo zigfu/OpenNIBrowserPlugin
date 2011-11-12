@@ -24,14 +24,18 @@ FB_FORWARD_PTR(ZigJS)
 class ZigJS : public FB::PluginCore
 {
 protected:
-	xn::Context m_context;
-	xn::DepthGenerator m_depth;
+
 	int m_lastFrame;
+	
 
 public:
+	xn::Context m_context;
+	xn::DepthGenerator m_depth;
+	xn::GestureGenerator m_gestures;
+	xn::HandsGenerator m_hands;
     static void StaticInitialize();
     static void StaticDeinitialize();
-
+	
 public:
     ZigJS();
     virtual ~ZigJS();

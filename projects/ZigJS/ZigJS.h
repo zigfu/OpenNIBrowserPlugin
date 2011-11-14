@@ -27,7 +27,8 @@ protected:
 
 	int m_lastFrame;
 	
-
+private:
+	static unsigned long XN_CALLBACK_TYPE OpenNIThread(void * instance);
 public:
 	xn::Context m_context;
 	xn::DepthGenerator m_depth;

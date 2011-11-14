@@ -10,34 +10,21 @@
 #include "ZigJSAPI.h"
 
 #include "ZigJS.h"
-struct zig_t {
-	int * frameId;
-	xn::Context * context;
-	xn::DepthGenerator * depth;
-	xn::HandsGenerator * hands;
-	xn::GestureGenerator * gestures;
-};
 
-
-
-
-
-
-extern "C" unsigned long __stdcall threadproc(void * ptr)
+unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * instance)
 {
-	zig_t * data = (zig_t *)ptr;
-	int * frameId = data->frameId;
-	xn::Context *zig = data->context;
-	xn::DepthGenerator * depth = data->depth;
+	ZigJS * zigJS = static_cast<ZigJS *>(instance);
+	xn::Context *zig = &(zigJS->m_context);
+	xn::DepthGenerator * depth = &(zigJS->m_depth);
 	
-	data->gestures->AddGesture ("Wave",  NULL); //no bounding box
-	data->gestures->AddGesture ("Click",  NULL); //no bounding box
+	zigJS->m_gestures.AddGesture ("Wave",  NULL); //no bounding box
+	zigJS->m_gestures.AddGesture ("Click",  NULL); //no bounding box
 
 
 	XnStatus nRetVal = zig->StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
-		*frameId = -1;
+		zigJS->m_lastFrame = -1;
 		return -1;
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
@@ -48,11 +35,10 @@ extern "C" unsigned long __stdcall threadproc(void * ptr)
 		zig->WaitAndUpdateAll();
 		if (nRetVal != XN_STATUS_OK) {
 			FBLOG_INFO("xnInit", "fail wait & update");
-			*frameId = -111;
 			break;
 		} else {
 			depth->GetMetaData(md);
-			*frameId = (int)md.FrameID();
+			zigJS->m_lastFrame = (int)md.FrameID();
 		}
 	}
 }
@@ -97,15 +83,13 @@ ZigJS::ZigJS()
 	m_lastFrame = -1337;
 	XnStatus nRetVal = XN_STATUS_OK;
 	nRetVal = m_context.Init();
-	char temp[100];
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail context init");
-		m_lastFrame = -5;
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok context init");
 	}
-	//TODO: leak some memory
+	//TODO: leaking some memory? 
 	XnLicense * license = new XnLicense();
 	xnOSStrCopy(license->strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(license->strKey));
 	xnOSStrCopy(license->strVendor, "PrimeSense", sizeof(license->strVendor));
@@ -138,22 +122,10 @@ ZigJS::ZigJS()
 		FBLOG_INFO("xnInit", "ok get hands");
 	}
 
-
 	XN_THREAD_HANDLE handle;
-	zig_t *data = new zig_t;
-	data->frameId = &m_lastFrame;
-	data->context = &m_context;
-	data->depth = &m_depth;
-	data->gestures = &m_gestures;
-	data->hands = &m_hands;
-	
-	
-	
 
-
-
-
-	nRetVal = xnOSCreateThread(threadproc, data, &handle);
+	//nRetVal = xnOSCreateThread(threadproc, data, &handle);
+	nRetVal = xnOSCreateThread(OpenNIThread, this, &handle);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start thread");
 		m_lastFrame = -7;

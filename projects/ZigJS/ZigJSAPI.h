@@ -37,6 +37,10 @@ public:
     
     // Event helpers
 	FB_JSAPI_EVENT(WaveGesture, 3, (float,float,float));
+	FB_JSAPI_EVENT(HandCreate, 5, (int,float,float,float,float));
+	FB_JSAPI_EVENT(HandUpdate, 5, (int,float,float,float,float));
+	FB_JSAPI_EVENT(HandDestroy, 2, (int,float));
+
     FB_JSAPI_EVENT(fired, 3, (const FB::variant&, bool, int));
     FB_JSAPI_EVENT(echo, 2, (const FB::variant&, const int));
     FB_JSAPI_EVENT(notify, 0, ());

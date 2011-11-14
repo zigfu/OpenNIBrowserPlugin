@@ -126,33 +126,40 @@
             var el = $("#" + id);
             el.html(el.attr("text") + " failed!").addClass("failed").removeClass("passed");
         }
-		function onWaveGesture()
+		function onWaveGesture(x,y,z)
 		{
-			alert("Wave Gesture!");
+			//alert("Wave Gesture!");
+			document.getElementById("log").innerHTML += "WaveGesture" + x.toString() + ' ' + y.toString() + ' '+ z.toString();
 		}
+		
+		function onHandCreate(uid, x,y,z, t)
+		{
+			document.getElementById("log").innerHTML += "HandCreate"+uid+' '+x.toString()+' '+y.toString()+' '+z.toString()+' '+t.toString();
+			document.getElementById("handpos").innerHTML = x.toString()+' '+y.toString()+' '+z.toString();
+			
+		}
+		
+		
+		function onHandUpdate(uid,x,y,z,y){
+			document.getElementById("handpos").innerHTML = x.toString()+' '+y.toString()+' '+z.toString();
+		}
+		
+		function onHandDestroy(uid, t)
+		{
+			document.getElementById("log").innerHTML += "HandDestroy"+uid+' '+t.toString();
+			document.getElementById("handpos").innerHTML = '';
+			
+		}
+		
         function pageLoaded() {
-            addTest("loaded", "Plugin onload event");
-            addTest("valid", "Plugin valid test");
-            addTest("getPluginPath", "Get plugin path");
-            addTest("echo", "Plugin echo test");
-            addTest("reverse", "Plugin reverse test");
-            addTest("getMap", "Plugin return map test");
-            addTest("location", "Get page location test");
-
-            addTest("countArray", "Count array length returned from JSAPI object");
-            addTest("simpleFireEvent", "Simple event bind and fire test");
-            addTest("attachedFireEvent", "Simple event bind attach and fire test");
-            addTest("dialog", "Dialog callback test");
-            addTest("getURL", "Download stream (GET)");
-            addTest("postURL", "Download stream (POST)");
-            //addTest("dangerousInject", "Dangerous injection");
-            addTest("calltest", "Function.call method");
-            addTest("applytest", "Function.apply method");
-            markFailed("loaded");
+           document.getElementById("log").innerHTML = "adding events"
             injectPlugin($("#pluginContainer"), pluginLoaded);
 		
 			document.getElementById("testPlugin").addEventListener("WaveGesture", onWaveGesture, false);
-
+			document.getElementById("testPlugin").addEventListener("HandCreate", onHandCreate, false);
+			document.getElementById("testPlugin").addEventListener("HandUpdate", onHandUpdate, false);
+			document.getElementById("testPlugin").addEventListener("HandDestroy", onHandDestroy, false);
+			document.getElementById("log").innerHTML += "events added"
         }
 		
  
@@ -554,5 +561,9 @@
         </ul>
     </div>
     <div id="test"></div>
-</body>
+	<br><br><div id="handpos">Hand Position</div>
+
+	<br><br>
+	<div id="log">Log</div>
+	</body>
 </html>

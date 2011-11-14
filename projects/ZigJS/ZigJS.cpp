@@ -31,6 +31,8 @@ extern "C" unsigned long __stdcall threadproc(void * ptr)
 	xn::DepthGenerator * depth = data->depth;
 	
 	data->gestures->AddGesture ("Wave",  NULL); //no bounding box
+	data->gestures->AddGesture ("Click",  NULL); //no bounding box
+
 
 	XnStatus nRetVal = zig->StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {

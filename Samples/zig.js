@@ -10,20 +10,53 @@ function clamp(x, min, max)
 	return x;
 }
 
-var Fader = Class.create({
-	initialize : function(size, orientation) {
-		this.size = size;
-		this.orientation = orientation;	
-		this.center = [0,0,0];
-	},
+function Fader(size, orientation)
+{
+	this.size = size;
+	this.orientation = orientation;
+	this.value = 0;
+	this.center = [0,0,0];
+	this.itemsCount = 1;
+	this.hysteresis = 0.3;
+	this.selectedItem = 0;
+	
+	this.onItemSelected = function(item){};
+	this.onItemUnselected = function(item){};
+}
 
-	recenter : function(position) {
-		this.center = position;
-	},
+Fader.prototype.handcreate = function(position)
+{
+	this.center = position;
+	this.selectedItem = Math.floor(this.itemsCount / 2);
+	this.handupdate(position);
+	this.onItemSelected(newSelected);
+}
 
-	getvalue : function(position) {
-		distanceFromCenter = position[this.orientation] - this.center[this.orientation];
-		ret = distanceFromCenter / this.size + 0.5;
-		return clamp(ret, 0, 1);
+Fader.prototype.handupdate = function(position)
+{
+	distanceFromCenter = position[this.orientation] - this.center[this.orientation];
+	ret = distanceFromCenter / this.size + 0.5;
+	this.value = 1 - clamp(ret, 0, 1);
+
+	newSelected = this.selectedItem;
+	
+	minValue = (this.selectedItem * (1 / this.itemsCount)) - this.hysteresis;
+	maxValue = (this.selectedItem + 1) * (1 / this.itemsCount) + this.hysteresis;
+	if (this.value > maxValue) {
+		newSelected++;
 	}
-});
+	if (this.value < minValue) {
+		newSelected--;
+	}
+	
+	if (newSelected != this.selectedItem) {
+		this.onItemUnselected(this.selectedItem);
+		this.selectedItem = newSelected;
+		this.onItemSelected(newSelected);
+	}
+}
+
+Fader.prototype.handdestroy = function(position)
+{
+	this.onItemUnselected(this.selectedItem);
+}

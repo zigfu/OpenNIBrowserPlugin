@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>Unity Web Player | WebPlayer</title>
+
+		<script type="text/javascript">
+		<!--
+	function XBrowserAddHandler(target,eventName,handlerName)
+	{
+		if ( target.attachEvent )
+			target.attachEvent("on" + eventName, handlerName);
+		else if ( target.addEventListener )
+			target.addEventListener(eventName, handlerName, false);
+		else
+			target["on" + eventName] = handlerName;
+	}
+
+
+        function plugin() {
+            return document.getElementById("testPlugin");
+        }
+
+		
+		function onHandCreate(uid, x,y,z, t) {
+		}
+		
+		
+		function onHandUpdate(uid,x,y,z,t) {
+		}
+		
+		function onHandDestroy(uid, t) {
+			
+		}
+		
+
+	function pluginLoaded() {
+	           document.getElementById("log").innerHTML = "adding events"
+
+			XBrowserAddHandler(document.getElementById("testPlugin"), "WaveGesture", onWaveGesture);
+			XBrowserAddHandler(document.getElementById("testPlugin"), "HandCreate", onHandCreate);
+			XBrowserAddHandler(document.getElementById("testPlugin"), "HandUpdate", onHandUpdate);
+			XBrowserAddHandler(document.getElementById("testPlugin"), "HandDestroy", onHandDestroy);
+        }
+
+
+
+		-->
+		</script>
+
+
+
+		<style type="text/css">
+		<!--
+		body {
+			font-family: Helvetica, Verdana, Arial, sans-serif;
+			background-color: white;
+			color: black;
+			text-align: center;
+		}
+		a:link, a:visited {
+			color: #000;
+		}
+		a:active, a:hover {
+			color: #666;
+		}
+		p.header {
+			font-size: small;
+		}
+		p.header span {
+			font-weight: bold;
+		}
+		p.footer {
+			font-size: x-small;
+		}
+		
+		-->
+		</style>
+	</head>
+	<body>
+		<p class="header"><span>ZigJS Sample | </span>Sample 1</p>
+
+    <div id="pluginContainer">
+		<object id="testPlugin" type="application/x-zig" width="0" height="0">
+			<param name="onload" value="pluginLoaded" />
+		</object>
+
+    </div>
+
+		<p class="footer">&laquo; created with <a href="http://www.zigfu.com" title="Go to zigfu.com">ZigFu</a> &raquo;</p>
+	</body>
+</html>

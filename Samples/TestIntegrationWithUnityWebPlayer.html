@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>Unity Web Player | WebPlayer</title>
+		<script type="text/javascript" src="http://webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject.js"></script>
+		<script type="text/javascript">
+		<!--
+		function GetUnity() {
+			if (typeof unityObject != "undefined") {
+				return unityObject.getObjectById("unityPlayer");
+			}
+			return null;
+		}
+		if (typeof unityObject != "undefined") {
+			unityObject.embedUnity("unityPlayer", "WebPlayer.unity3d", 1280, 450);
+			
+		}
+		-->
+		</script>
+
+
+		<script type="text/javascript">
+		<!--
+	function XBrowserAddHandler(target,eventName,handlerName)
+	{
+		if ( target.attachEvent )
+			target.attachEvent("on" + eventName, handlerName);
+		else if ( target.addEventListener )
+			target.addEventListener(eventName, handlerName, false);
+		else
+			target["on" + eventName] = handlerName;
+	}
+
+	function TalkToSessionManager(funcName, data)
+	{
+		var unity = unityObject.getObjectById("unityPlayer");
+		unity.SendMessage("SessionManagerContainer", funcName, data);
+	}
+
+        function plugin() {
+            return document.getElementById("testPlugin");
+        }
+
+
+		function onWaveGesture(x,y,z)
+		{
+			//alert("Wave Gesture!");
+			document.getElementById("log").innerHTML += "WaveGesture" + x.toString() + ' ' + y.toString() + ' '+ z.toString();
+		}
+		
+		function onHandCreate(uid, x,y,z, t)
+		{
+			document.getElementById("log").innerHTML += "HandCreate"+uid+' '+x.toString()+' '+y.toString()+' '+z.toString()+' '+t.toString();
+			document.getElementById("handpos").innerHTML = x.toString()+' '+y.toString()+' '+z.toString();
+
+			var data = {
+				"handId" : uid,
+				"position" : [x,y,z],
+				"time" : t
+			};
+
+			TalkToSessionManager("JSHandCreate", JSON.stringify(data));
+		}
+		
+		
+		function onHandUpdate(uid,x,y,z,t){
+			document.getElementById("handpos").innerHTML = x.toString()+' '+y.toString()+' '+z.toString();
+
+
+			var data = {
+				"handId" : uid,
+				"position" : [x,y,z],
+				"time" : t
+			};
+
+			TalkToSessionManager("JSHandUpdate", JSON.stringify(data));
+		}
+		
+		function onHandDestroy(uid, t)
+		{
+			document.getElementById("log").innerHTML += "HandDestroy"+uid+' '+t.toString();
+			document.getElementById("handpos").innerHTML = '';
+
+
+			var data = {
+				"handId" : uid,
+				"time" : t
+			};
+
+			TalkToSessionManager("JSHandDestroy", JSON.stringify(data));
+
+			
+		}
+		
+
+	function pluginLoaded() {
+	           document.getElementById("log").innerHTML = "adding events"
+
+			XBrowserAddHandler(document.getElementById("testPlugin"), "WaveGesture", onWaveGesture);
+			XBrowserAddHandler(document.getElementById("testPlugin"), "HandCreate", onHandCreate);
+			XBrowserAddHandler(document.getElementById("testPlugin"), "HandUpdate", onHandUpdate);
+			XBrowserAddHandler(document.getElementById("testPlugin"), "HandDestroy", onHandDestroy);
+			document.getElementById("log").innerHTML += "events added"
+
+		var unity = unityObject.getObjectById("unityPlayer");
+		unity.SendMessage("Test", "Moshe", "ZigJS plugin loaded o'mercy");
+        }
+
+	function send()
+	{
+alert("ok");
+		var unity = unityObject.getObjectById("unityPlayer");
+		unity.SendMessage("Test", "Moshe", "ZigJS plugin loaded o'mercy");
+	}
+
+
+		-->
+		</script>
+
+
+
+		<style type="text/css">
+		<!--
+		body {
+			font-family: Helvetica, Verdana, Arial, sans-serif;
+			background-color: white;
+			color: black;
+			text-align: center;
+		}
+		a:link, a:visited {
+			color: #000;
+		}
+		a:active, a:hover {
+			color: #666;
+		}
+		p.header {
+			font-size: small;
+		}
+		p.header span {
+			font-weight: bold;
+		}
+		p.footer {
+			font-size: x-small;
+		}
+		div.content {
+			margin: auto;
+			width: 1280px;
+		}
+		div.missing {
+			margin: auto;
+			position: relative;
+			top: 50%;
+			width: 193px;
+		}
+		div.missing a {
+			height: 63px;
+			position: relative;
+			top: -31px;
+		}
+		div.missing img {
+			border-width: 0px;
+		}
+		div#unityPlayer {
+			cursor: default;
+			height: 450px;
+			width: 1280px;
+		}
+		-->
+		</style>
+	</head>
+	<body>
+		<p class="header"><span>Unity Web Player | </span>WebPlayer</p>
+		<div class="content">
+			<div id="unityPlayer">
+				<div class="missing">
+					<a href="http://unity3d.com/webplayer/" title="Unity Web Player. Install now!">
+						<img alt="Unity Web Player. Install now!" src="http://webplayer.unity3d.com/installation/getunity.png" width="193" height="63" />
+					</a>
+				</div>
+			</div>
+		</div>
+    <div id="pluginContainer">
+		<object id="testPlugin" type="application/x-zig" width="100%" height="100%">
+			<param name="onload" value="pluginLoaded" />
+		</object>
+
+    </div>
+<hr>
+    <div id="test"></div>
+	<br><br><div id="handpos">Hand Position</div>
+
+	<br><br>
+	<div id="log">Log</div>
+
+
+		<p class="footer">&laquo; created with <a href="http://unity3d.com/unity/" title="Go to unity3d.com">Unity</a> &raquo;</p>
+	<button onclick="send()" value="send" />
+	</body>
+</html>

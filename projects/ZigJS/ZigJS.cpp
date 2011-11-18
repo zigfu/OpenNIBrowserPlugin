@@ -11,34 +11,40 @@
 
 #include "ZigJS.h"
 
-unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * instance)
+xn::Context ZigJS::s_context;
+xn::DepthGenerator ZigJS::s_depth;
+xn::GestureGenerator ZigJS::s_gestures;
+xn::HandsGenerator ZigJS::s_hands;
+
+int ZigJS::s_lastFrame;
+XN_THREAD_HANDLE ZigJS::s_threadHandle = NULL;
+volatile bool ZigJS::s_quit = false;
+
+unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 {
-	ZigJS * zigJS = static_cast<ZigJS *>(instance);
-	xn::Context *zig = &(zigJS->m_context);
-	xn::DepthGenerator * depth = &(zigJS->m_depth);
 	
-	zigJS->m_gestures.AddGesture ("Wave",  NULL); //no bounding box
-	zigJS->m_gestures.AddGesture ("Click",  NULL); //no bounding box
+	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
+	s_gestures.AddGesture ("Click",  NULL); //no bounding box
 
 
-	XnStatus nRetVal = zig->StartGeneratingAll();
+	XnStatus nRetVal = s_context.StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
-		zigJS->m_lastFrame = -1;
+		s_lastFrame = -1;
 		return -1;
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
 	}
 	xn::DepthMetaData md;
 	
-	while(true) {
-		zig->WaitAndUpdateAll();
+	while(!s_quit) {
+		s_context.WaitAndUpdateAll();
 		if (nRetVal != XN_STATUS_OK) {
 			FBLOG_INFO("xnInit", "fail wait & update");
 			break;
 		} else {
-			depth->GetMetaData(md);
-			zigJS->m_lastFrame = (int)md.FrameID();
+			s_depth.GetMetaData(md);
+			s_lastFrame = (int)md.FrameID();
 		}
 	}
 }
@@ -54,6 +60,57 @@ void ZigJS::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
+	XnStatus nRetVal = XN_STATUS_OK;
+	nRetVal = s_context.Init();
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_INFO("xnInit", "fail context init");
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok context init");
+	}
+	//TODO: leaking some memory? 
+	XnLicense * license = new XnLicense();
+	xnOSStrCopy(license->strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(license->strKey));
+	xnOSStrCopy(license->strVendor, "PrimeSense", sizeof(license->strVendor));
+	s_context.AddLicense(*license);
+
+	s_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, s_depth);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail get depth");
+		s_lastFrame = -6;
+		return;
+	} else {
+		FBLOG_DEBUG("xnInit", "ok get depth");
+	}
+	
+	s_context.CreateAnyProductionTree(XN_NODE_TYPE_GESTURE, NULL, s_gestures);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail get gesture");
+		s_lastFrame = -6;
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok get gesture");
+	}
+	
+	s_context.CreateAnyProductionTree(XN_NODE_TYPE_HANDS, NULL, s_hands);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail get hands");
+		s_lastFrame = -6;
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok get hands");
+	}
+
+	s_quit = false;
+	//nRetVal = xnOSCreateThread(threadproc, data, &handle);
+	nRetVal = xnOSCreateThread(OpenNIThread, NULL, &s_threadHandle);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail start thread");
+		s_lastFrame = -7;
+		return;
+	} else {
+		FBLOG_DEBUG("xnInit", "ok start thread");
+	}
 }
 
 
@@ -69,6 +126,17 @@ void ZigJS::StaticDeinitialize()
 {
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
+	s_quit = true;
+	XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
+	if (XN_STATUS_OK != nRetVal) {
+		FBLOG_DEBUG("deinit", "failed waiting on thread to quit");
+		return;
+	}
+	s_hands.Release();
+	s_gestures.Release();
+	s_depth.Release();
+	s_context.Release();
+	
 }
 
 
@@ -80,59 +148,6 @@ void ZigJS::StaticDeinitialize()
 ///////////////////////////////////////////////////////////////////////////////
 ZigJS::ZigJS()
 {
-	m_lastFrame = -1337;
-	XnStatus nRetVal = XN_STATUS_OK;
-	nRetVal = m_context.Init();
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_INFO("xnInit", "fail context init");
-		return;
-	} else {
-		FBLOG_INFO("xnInit", "ok context init");
-	}
-	//TODO: leaking some memory? 
-	XnLicense * license = new XnLicense();
-	xnOSStrCopy(license->strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(license->strKey));
-	xnOSStrCopy(license->strVendor, "PrimeSense", sizeof(license->strVendor));
-	m_context.AddLicense(*license);
-
-	m_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, m_depth);
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_INFO("xnInit", "fail get depth");
-		m_lastFrame = -6;
-		return;
-	} else {
-		FBLOG_INFO("xnInit", "ok get depth");
-	}
-	
-	m_context.CreateAnyProductionTree(XN_NODE_TYPE_GESTURE, NULL, m_gestures);
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_INFO("xnInit", "fail get gesture");
-		m_lastFrame = -6;
-		return;
-	} else {
-		FBLOG_INFO("xnInit", "ok get gesture");
-	}
-	
-	m_context.CreateAnyProductionTree(XN_NODE_TYPE_HANDS, NULL, m_hands);
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_INFO("xnInit", "fail get hands");
-		m_lastFrame = -6;
-		return;
-	} else {
-		FBLOG_INFO("xnInit", "ok get hands");
-	}
-
-	XN_THREAD_HANDLE handle;
-
-	//nRetVal = xnOSCreateThread(threadproc, data, &handle);
-	nRetVal = xnOSCreateThread(OpenNIThread, this, &handle);
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_INFO("xnInit", "fail start thread");
-		m_lastFrame = -7;
-		return;
-	} else {
-		FBLOG_INFO("xnInit", "ok start thread");
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -212,5 +227,5 @@ bool ZigJS::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
 }
 
 int ZigJS::getLastFrameID() {
-	return m_lastFrame;
+	return s_lastFrame;
 }

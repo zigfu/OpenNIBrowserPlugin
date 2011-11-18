@@ -23,17 +23,22 @@
 FB_FORWARD_PTR(ZigJS)
 class ZigJS : public FB::PluginCore
 {
-protected:
-
-	int m_lastFrame;
-	
 private:
+
+
 	static unsigned long XN_CALLBACK_TYPE OpenNIThread(void * instance);
+
+	static XN_THREAD_HANDLE s_threadHandle;
+
 public:
-	xn::Context m_context;
-	xn::DepthGenerator m_depth;
-	xn::GestureGenerator m_gestures;
-	xn::HandsGenerator m_hands;
+	static xn::Context s_context;
+	static xn::DepthGenerator s_depth;
+	static xn::GestureGenerator s_gestures;
+	static xn::HandsGenerator s_hands;
+	static volatile bool s_quit;
+
+	static int s_lastFrame;
+
     static void StaticInitialize();
     static void StaticDeinitialize();
 	
@@ -49,7 +54,7 @@ public:
     // If you want your plugin to be optionally windowless based on the
     // value of the "windowless" param tag, remove this method or return
     // FB::PluginCore::isWindowless()
-    virtual bool isWindowless() { return false; }
+    virtual bool isWindowless() { return true; }
 
     BEGIN_PLUGIN_EVENT_MAP()
         EVENTTYPE_CASE(FB::MouseDownEvent, onMouseDown, FB::PluginWindow)

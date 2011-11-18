@@ -26,23 +26,23 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
+void XN_CALLBACK_TYPE ZigJSAPI::GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
 {
 	((ZigJSAPI*)pCookie)->fire_WaveGesture(pEndPosition->X,pEndPosition->Y,pEndPosition->Z);
-	((ZigJSAPI*)pCookie)->getPlugin()->m_hands.StartTracking(*pEndPosition);
+	ZigJS::s_hands.StartTracking(*pEndPosition);
 }
 
-void XN_CALLBACK_TYPE HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
+void XN_CALLBACK_TYPE ZigJSAPI::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
 	((ZigJSAPI*)pCookie)->fire_HandCreate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
 }
 
-void XN_CALLBACK_TYPE HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
+void XN_CALLBACK_TYPE ZigJSAPI::HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
 	((ZigJSAPI*)pCookie)->fire_HandUpdate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
 }
 
-void XN_CALLBACK_TYPE HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
+void XN_CALLBACK_TYPE ZigJSAPI::HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
 {
 	((ZigJSAPI*)pCookie)->fire_HandDestroy((int)user, (float)fTime);
 }
@@ -66,10 +66,8 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
                         &ZigJSAPI::get_version));
 
 	
-	XnCallbackHandle hGesture;
-	XnCallbackHandle hHand;
-	plugin->m_gestures.RegisterGestureCallbacks(GestureRecognizedHandler, NULL, this, hGesture);
-	plugin->m_hands.RegisterHandCallbacks(HandCreateHandler, HandUpdateHandler, HandDestroyHandler, this, hHand);
+	ZigJS::s_gestures.RegisterGestureCallbacks(&ZigJSAPI::GestureRecognizedHandler, NULL, this, m_gestureCB);
+	ZigJS::s_hands.RegisterHandCallbacks(&ZigJSAPI::HandCreateHandler, &ZigJSAPI::HandUpdateHandler, &ZigJSAPI::HandDestroyHandler, this, m_handCB);
 }
 
 
@@ -83,6 +81,8 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 ///////////////////////////////////////////////////////////////////////////////
 ZigJSAPI::~ZigJSAPI()
 {
+	ZigJS::s_gestures.UnregisterGestureCallbacks(m_gestureCB);
+	ZigJS::s_hands.UnregisterHandCallbacks(m_handCB);
 }
 
 

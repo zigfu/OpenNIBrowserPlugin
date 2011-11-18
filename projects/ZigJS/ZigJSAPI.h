@@ -50,10 +50,19 @@ public:
 
 private:
 
- ZigJSWeakPtr m_plugin;
+	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
 
+	XnCallbackHandle m_gestureCB;
+	XnCallbackHandle m_handCB;
+
+
     std::string m_testString;
+
+	static void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
+	static void XN_CALLBACK_TYPE HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
+	static void XN_CALLBACK_TYPE HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
+	static void XN_CALLBACK_TYPE HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie);
 };
 
 #endif // H_ZigJSAPI

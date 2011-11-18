@@ -134,3 +134,7 @@ void ZigJSAPI::testEvent(const FB::variant& var)
     fire_fired(var, true, 1);
 }
 
+void ZigJSAPI::setUsers(const FB::VariantList& users)
+{
+	SetProperty("users", users);
+}

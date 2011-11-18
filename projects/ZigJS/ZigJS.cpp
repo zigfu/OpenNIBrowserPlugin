@@ -11,14 +11,29 @@
 
 #include "ZigJS.h"
 
+using namespace boost::assign;
+
 xn::Context ZigJS::s_context;
 xn::DepthGenerator ZigJS::s_depth;
 xn::GestureGenerator ZigJS::s_gestures;
 xn::HandsGenerator ZigJS::s_hands;
+xn::UserGenerator ZigJS::s_users;
 
 int ZigJS::s_lastFrame;
 XN_THREAD_HANDLE ZigJS::s_threadHandle = NULL;
 volatile bool ZigJS::s_quit = false;
+
+std::list< ZigJSAPIWeakPtr > ZigJS::s_listeners;
+boost::recursive_mutex ZigJS::s_listenersMutex;
+
+void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
+{
+	boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+	s_listeners.push_back(listener);
+}
+
+
+const int MAX_USERS = 16;
 
 unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 {
@@ -36,16 +51,47 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 		FBLOG_INFO("xnInit", "ok start generating");
 	}
 	xn::DepthMetaData md;
-	
+
 	while(!s_quit) {
 		s_context.WaitAndUpdateAll();
 		if (nRetVal != XN_STATUS_OK) {
 			FBLOG_INFO("xnInit", "fail wait & update");
 			break;
-		} else {
-			s_depth.GetMetaData(md);
-			s_lastFrame = (int)md.FrameID();
+		} 
+		s_depth.GetMetaData(md);
+		s_lastFrame = (int)md.FrameID();
+
+		// get the users
+		XnUInt16 nUsers = MAX_USERS;
+		XnUserID aUsers[MAX_USERS];
+		s_users.GetUsers(aUsers, nUsers);
+		// construct JS object
+		FB::VariantList jsUsers;
+		for (int i = 0; i < nUsers; i++) {
+			FB::VariantMap object;
+			XnPoint3D pos;
+			s_users.GetCoM(aUsers[i], pos);
+			FB::VariantList xyz;
+			xyz += pos.X, pos.Y, pos.Z;
+			object["centerOfMass"] = xyz;
+			object["uid"] = aUsers[i];
+			jsUsers += object;
 		}
+		// send to listeners
+		{
+			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+			for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+				ZigJSAPIPtr realPtr = i->lock();
+				if (realPtr) { 
+					realPtr->setUsers(jsUsers);
+					++i;
+				} else {
+					s_listeners.erase(i++);
+				}
+			}
+		}
+
+
 	}
 }
 
@@ -101,6 +147,15 @@ void ZigJS::StaticInitialize()
 		FBLOG_INFO("xnInit", "ok get hands");
 	}
 
+	s_context.CreateAnyProductionTree(XN_NODE_TYPE_USER, NULL, s_users);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail get hands");
+		s_lastFrame = -6;
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok get hands");
+	}
+
 	s_quit = false;
 	//nRetVal = xnOSCreateThread(threadproc, data, &handle);
 	nRetVal = xnOSCreateThread(OpenNIThread, NULL, &s_threadHandle);
@@ -136,7 +191,7 @@ void ZigJS::StaticDeinitialize()
 	s_gestures.Release();
 	s_depth.Release();
 	s_context.Release();
-	
+	s_listeners.clear();
 }
 
 
@@ -194,7 +249,9 @@ void ZigJS::shutdown()
 FB::JSAPIPtr ZigJS::createJSAPI()
 {
     // m_host is the BrowserHost
-    return boost::make_shared<ZigJSAPI>(FB::ptr_cast<ZigJS>(shared_from_this()), m_host);
+    ZigJSAPIPtr newJSAPI = boost::make_shared<ZigJSAPI>(FB::ptr_cast<ZigJS>(shared_from_this()), m_host);
+	ZigJS::AddListener(newJSAPI);
+	return newJSAPI;
 }
 
 bool ZigJS::onMouseDown(FB::MouseDownEvent *evt, FB::PluginWindow *)

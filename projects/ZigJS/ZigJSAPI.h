@@ -4,15 +4,15 @@
 
 \**********************************************************/
 
+#ifndef H_ZigJSAPI
+#define H_ZigJSAPI
+
 #include <string>
 #include <sstream>
 #include <boost/weak_ptr.hpp>
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
 #include "ZigJS.h"
-
-#ifndef H_ZigJSAPI
-#define H_ZigJSAPI
 
 class ZigJSAPI : public FB::JSAPIAuto
 {
@@ -48,7 +48,10 @@ public:
     // Method test-event
     void testEvent(const FB::variant& s);
 
+	void setUsers(const FB::VariantList& users);
 private:
+
+	FB::variant m_users;
 
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;

@@ -21,6 +21,9 @@
 
 
 FB_FORWARD_PTR(ZigJS)
+
+FB_FORWARD_PTR(ZigJSAPI)
+
 class ZigJS : public FB::PluginCore
 {
 private:
@@ -30,17 +33,23 @@ private:
 
 	static XN_THREAD_HANDLE s_threadHandle;
 
+	static std::list<ZigJSAPIWeakPtr > s_listeners;
+	static boost::recursive_mutex s_listenersMutex;
+
 public:
 	static xn::Context s_context;
 	static xn::DepthGenerator s_depth;
 	static xn::GestureGenerator s_gestures;
 	static xn::HandsGenerator s_hands;
+	static xn::UserGenerator s_users;
 	static volatile bool s_quit;
 
 	static int s_lastFrame;
 
     static void StaticInitialize();
     static void StaticDeinitialize();
+
+	static void AddListener(ZigJSAPIWeakPtr listener);
 	
 public:
     ZigJS();

@@ -22,13 +22,15 @@
             return document.getElementById("testPlugin");
         }
 		
+		var session = new SessionManager();
 		function load()
 		{
-			var session = new SessionManager();
-			plugin = plugin();
-			XBrowserAddHandler(plugin, "HandCreate", function(n,x,y,z,t){session.rawHandCreate(n,x,y,z,t);});
-			XBrowserAddHandler(plugin, "HandUpdate", function(n,x,y,z,t){session.rawHandUpdate(n,x,y,z,t);});
-			XBrowserAddHandler(plugin, "HandDestroy", function(n,t){session.rawHandCreate(n,t);});
+			
+			
+			//XBrowserAddHandler(plugin(), "HandCreate", function(n,x,y,z,t){session.rawHandCreate(n,x,y,z,t);});
+			XBrowserAddHandler(plugin(), "HandCreate", function(n,x,y,z,t){session.rawHandCreate(n,x,y,z,t);});
+			XBrowserAddHandler(plugin(), "HandUpdate", function(n,x,y,z,t){session.rawHandUpdate(n,x,y,z,t);});
+			XBrowserAddHandler(plugin(), "HandDestroy", function(n,t){session.rawHandDestroy(n,t);});
 			
 			var f = new ItemSelector(session,200,0);
 			f.itemsCount = 5;

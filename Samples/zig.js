@@ -20,11 +20,13 @@ var Hand = Class.create({
 var SessionManager = Class.create({
  
 	initialize: function() {
+		//alert("new session manager");
 		this.controls = new Array();
 		this.hands = new Hash();
 		this.isInSession = false;
 		this.sessionHandID = -1;
 	},
+
 	rawHandUpdate: function (handID, x,y,z, t) {
 		var position = [x,y,z];
 		if (handID == this.sessionHandID)
@@ -34,6 +36,7 @@ var SessionManager = Class.create({
 
 	},
 	rawHandCreate: function (handID, x,y,z, t) {
+		//alert("hand create");
 		var position = [x,y,z];
 	//	alert("new hand create");
 	//TODO: add rotation based on user/position of hand relative to sensor
@@ -48,7 +51,8 @@ var SessionManager = Class.create({
 
 	},
 	rawHandDestroy: function (handID, t) {
-		if (handID = this.sessionHandID)
+		
+		if (handID == this.sessionHandID)
 		{
 			this.controls.each(function(hpc){hpc.onHandDestroy();})
 			this.isInSession = false;
@@ -142,7 +146,8 @@ var ItemSelector = Class.create(HandPointControls,
 	},
 	
 	onHandDestroy: function() {
-	this.onItemUnselected(this.selectedItem)
+		
+		this.onItemUnselected(this.selectedItem)
 	}
 });
 

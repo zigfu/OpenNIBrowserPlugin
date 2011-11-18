@@ -40,6 +40,16 @@ public:
     {
         ZigJS::StaticDeinitialize();
     }
+
+	FB::Log::LogLevel getLogLevel(){
+		return FB::Log::LogLevel_Debug; // Now Debug and above is logged.
+	}
+
+	void getLoggingMethods( FB::Log::LogMethodList& outMethods )
+	{
+		outMethods.push_back(std::make_pair(FB::Log::LogMethod_Console, std::string()));
+		//outMethods.push_back(std::make_pair(FB::Log::LogMethod_File, "D:\\fire.log"));
+	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////

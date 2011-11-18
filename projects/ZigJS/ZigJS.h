@@ -73,7 +73,6 @@ public:
     virtual bool onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *);
     /** END EVENTDEF -- DON'T CHANGE THIS LINE **/
 
-	int getLastFrameID();
 };
 
 

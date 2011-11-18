@@ -226,6 +226,3 @@ bool ZigJS::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
     return false;
 }
 
-int ZigJS::getLastFrameID() {
-	return s_lastFrame;
-}

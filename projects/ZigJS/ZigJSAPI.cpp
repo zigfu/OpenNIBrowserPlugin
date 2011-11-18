@@ -118,9 +118,7 @@ void ZigJSAPI::set_testString(const std::string& val)
 // Read-only property version
 std::string ZigJSAPI::get_version()
 {
-	ZigJSPtr plugin = getPlugin();
-	
-    return (boost::format("%s: %d") % "test" % plugin->getLastFrameID()).str();
+    return (boost::format("%s: %d") % "test" % ZigJS::s_lastFrame).str();
 }
 
 // Method echo

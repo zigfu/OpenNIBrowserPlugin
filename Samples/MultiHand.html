@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>ItemSelector | WebPlayer</title>
+		<script type="text/javascript" src="prototype.js"></script>		
+		<script type="text/javascript" src="zig.js"></script>
+		<script type="text/javascript">
+		<!--
+
+	f = new Fader(300, OrientationX);
+
+	function XBrowserAddHandler(target,eventName,handlerName)
+	{
+		if ( target.attachEvent )
+			target.attachEvent("on" + eventName, handlerName);
+		else if ( target.addEventListener )
+			target.addEventListener(eventName, handlerName, false);
+		else
+			target["on" + eventName] = handlerName;
+	}
+
+
+        function plugin() {
+            return document.getElementById("testPlugin");
+        }
+
+		function str(x) { return x+''; }
+		function onHandCreate(uid, x,y,z, t) {
+			//alert("HandCreated" + str(uid) + str(x) + str(y) + str(z) + str(t));
+			f.recenter([x,y,z]);
+		}
+		
+		function onHandCreate2(uid, x,y,z, t)
+		{
+			row = document.createElement("tr");
+			row.id = "hand"+uid;
+			row.innerHTML = "<td>"+uid+"</td><td>"+x+"</td><td>"+y+"</td><td>"+z+"</td><td>"+t+"</td>";
+			$('dataTable').appendChild(row);
+		}
+		function onHandUpdate2(uid,x,y,z,t) {
+		rowid = "hand"+uid;
+		$(rowid).innerHTML = "<td>"+uid+"</td><td>"+x+"</td><td>"+y+"</td><td>"+z+"</td><td>"+t+"</td>";
+		}
+		function onHandUpdate(uid,x,y,z,t) {
+		
+		
+		var viewport = document.viewport.getDimensions(); // Gets the viewport as an object literal
+var width = viewport.width; // Usable window width
+var height = viewport.height; // Usable window height
+		
+			val = f.getvalue([x,y,z]);
+			$("cursorOmercy").style.left = (1.0 - val) * (width - 50) + "px";
+			$("faderValue").innerHTML = val;
+			
+		}
+		
+		function onHandDestroy(uid, t) {
+			$("faderValue").innerHTML = "Waiting for focus";
+		}
+		
+
+	function pluginLoaded() {
+		XBrowserAddHandler(document.getElementById("testPlugin"), "HandCreate", onHandCreate);
+		//Event.observe("testPlugin","HandCreate",onHandCreate2);
+		XBrowserAddHandler(document.getElementById("testPlugin"), "HandCreate", onHandCreate2);
+		
+		XBrowserAddHandler(document.getElementById("testPlugin"), "HandUpdate", onHandUpdate);
+		XBrowserAddHandler(document.getElementById("testPlugin"), "HandUpdate", onHandUpdate2);
+				
+		XBrowserAddHandler(document.getElementById("testPlugin"), "HandDestroy", onHandDestroy);
+        }
+
+
+
+		-->
+		</script>
+
+
+
+		<style type="text/css">
+		<!--
+		body {
+			font-family: Helvetica, Verdana, Arial, sans-serif;
+			background-color: white;
+			color: black;
+			text-align: center;
+		}
+		a:link, a:visited {
+			color: #000;
+		}
+		a:active, a:hover {
+			color: #666;
+		}
+		p.header {
+			font-size: small;
+		}
+		p.header span {
+			font-weight: bold;
+		}
+		p.footer {
+			font-size: x-small;
+		}
+
+		#cursorOmercy {
+			width: 50px;
+			height: 25px;
+			background-color:#FF0000;
+			position:absolute;
+			left:0px;
+		}
+		#dataTable
+		{
+			border: 1px solid black;
+		}
+		-->
+		</style>
+	</head>
+	<body>
+		<p class="header"><span>ZigJS Sample | </span>Sample 1</p>
+
+    <div id="pluginContainer">
+		<object id="testPlugin" type="application/x-zig" width="0" height="0">
+			<param name="onload" value="pluginLoaded" />
+		</object>
+
+    </div>
+	<div id="cursorOmercy">.</div>
+	<div id="faderValue">Waiting for focus</div>
+
+		<p class="footer">&laquo; created with <a href="http://www.zigfu.com" title="Go to zigfu.com">ZigFu</a> &raquo;</p>
+		Set Fader Size (mm): <input type="text" id="fadersize" onchange="f.size=parseFloat(this.value);"/>
+		
+	<table id="dataTable">	
+		<tr>
+		<td>uid</td><td>x</td><td>y</td><td>z</td><td>t</td>
+		</tr>
+	</body>
+</html>

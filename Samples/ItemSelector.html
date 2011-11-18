@@ -1,62 +1,67 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
-		<title>Unity Web Player | WebPlayer</title>
-		<script type="text/javascript" src="prototype.js"></script>		
+		<title>ZigFu testing</title>
+		
+		<script type="text/javascript" src="prototype.js"></script>
+		<script type="text/javascript" src="debug.min.js"></script>
 		<script type="text/javascript" src="zig.js"></script>
 		<script type="text/javascript">
 		<!--
-
-	f = new Fader(300, OrientationX);
-
-	function XBrowserAddHandler(target,eventName,handlerName)
-	{
-		if ( target.attachEvent )
-			target.attachEvent("on" + eventName, handlerName);
-		else if ( target.addEventListener )
-			target.addEventListener(eventName, handlerName, false);
-		else
-			target["on" + eventName] = handlerName;
-	}
-
+		function XBrowserAddHandler(target,eventName,handlerName)
+		{
+			if ( target.attachEvent )
+				target.attachEvent("on" + eventName, handlerName);
+			else if ( target.addEventListener )
+				target.addEventListener(eventName, handlerName, false);
+			else
+				target["on" + eventName] = handlerName;
+		}
 
         function plugin() {
             return document.getElementById("testPlugin");
         }
 
+		var f = new Fader(200,0);
+		f.itemsCount = 5;
+		f.hysteresis = 0.1;
+		f.onItemSelected = function(item) {
+			debug.log("Item selected " + item);
+			document.getElementById("navlist").children[item].className = "highlighted";
+		};
 		
+		f.onItemUnselected = function(item) {
+			debug.log("Item selected " + item);
+			document.getElementById("navlist").children[item].className = "default";
+		};
+
 		function onHandCreate(uid, x,y,z, t) {
-			f.recenter([x,y,z]);
+			f.handcreate([x,y,z]);
 		}
 		
-		
 		function onHandUpdate(uid,x,y,z,t) {
-			val = f.getvalue([x,y,z]);
-			$("cursorOmercy").style.left = (1.0 - val) * (screen.width - 50) + "px";
-			$("faderValue").innerHTML = val;
-			
+			f.handupdate([x,y,z]);
 		}
 		
 		function onHandDestroy(uid, t) {
-			$("faderValue").innerHTML = "Waiting for focus";
+			f.handdestroy();
 		}
 		
-
-	function pluginLoaded() {
-		XBrowserAddHandler(document.getElementById("testPlugin"), "HandCreate", onHandCreate);
-		XBrowserAddHandler(document.getElementById("testPlugin"), "HandUpdate", onHandUpdate);
-		XBrowserAddHandler(document.getElementById("testPlugin"), "HandDestroy", onHandDestroy);
-        }
-
-
-
+		function pluginLoaded() {
+			XBrowserAddHandler(plugin(), "HandCreate", onHandCreate);
+			XBrowserAddHandler(plugin(), "HandUpdate", onHandUpdate);
+			XBrowserAddHandler(plugin(), "HandDestroy", onHandDestroy);
+		}
+	
+		function doload()
+		{
+			debug.log("loaded");
+		}
+		
 		-->
 		</script>
 
-
-
 		<style type="text/css">
-		<!--
 		body {
 			font-family: Helvetica, Verdana, Arial, sans-serif;
 			background-color: white;
@@ -78,30 +83,46 @@
 		p.footer {
 			font-size: x-small;
 		}
-
-		#cursorOmercy {
-			width: 50px;
-			height: 25px;
-			background-color:#FF0000;
-			position:absolute;
-			left:0px;
+		
+		#navlist {
+			text-align: center;
 		}
 		
-		-->
+		#navlist li	{
+			float: left;
+			list-style-type: none;
+			margin: 50px;
+			width:200px;
+			height:200px;
+		}
+		
+		li.default {
+			background-color: #00FF00;
+		}
+		
+		li.highlighted {
+			background-color: #0000FF;
+		}
 		</style>
 	</head>
-	<body>
+	<body onload="doload();">
 		<p class="header"><span>ZigJS Sample | </span>Sample 1</p>
 
+	
     <div id="pluginContainer">
 		<object id="testPlugin" type="application/x-zig" width="0" height="0">
 			<param name="onload" value="pluginLoaded" />
 		</object>
-
     </div>
-	<div id="cursorOmercy">.</div>
-	<div id="faderValue">Waiting for focus</div>
-
-		<p class="footer">&laquo; created with <a href="http://www.zigfu.com" title="Go to zigfu.com">ZigFu</a> &raquo;</p>
+	<div>
+	<ul id="navlist">
+		<li class="default" id="li0"><a href="#" id="current">Item one</a></li>
+		<li class="default" id="li1"><a href="#">Item two</a></li>
+		<li class="default" id="li2"><a href="#">Item three</a></li>
+		<li class="default" id="li3"><a href="#">Item four</a></li>
+		<li class="default" id="li4"><a href="#">Item five</a></li>
+	</ul>
+	</div>
+	<p class="footer">&laquo; created with <a href="http://www.zigfu.com" title="Go to zigfu.com">ZigFu</a> &raquo;</p>
 	</body>
 </html>

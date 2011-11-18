@@ -21,20 +21,29 @@
         function plugin() {
             return document.getElementById("testPlugin");
         }
-
-		var f = new Fader(200,0);
-		f.itemsCount = 5;
-		f.hysteresis = 0.1;
-		f.onItemSelected = function(item) {
-			debug.log("Item selected " + item);
-			document.getElementById("navlist").children[item].className = "highlighted";
-		};
 		
-		f.onItemUnselected = function(item) {
-			debug.log("Item selected " + item);
-			document.getElementById("navlist").children[item].className = "default";
-		};
-
+		function load()
+		{
+			var session = new SessionManager();
+			plugin = plugin();
+			XBrowserAddHandler(plugin, "HandCreate", function(n,x,y,z,t){session.rawHandCreate(n,x,y,z,t);});
+			XBrowserAddHandler(plugin, "HandUpdate", function(n,x,y,z,t){session.rawHandUpdate(n,x,y,z,t);});
+			XBrowserAddHandler(plugin, "HandDestroy", function(n,t){session.rawHandCreate(n,t);});
+			
+			var f = new ItemSelector(session,200,0);
+			f.itemsCount = 5;
+			f.hysteresis = 0.1;
+			f.onItemSelected = function(item) {
+				debug.log("Item selected " + item);
+				document.getElementById("navlist").children[item].className = "highlighted";
+			};
+		
+			f.onItemUnselected = function(item) {	
+				debug.log("Item selected " + item);
+				document.getElementById("navlist").children[item].className = "default";
+			};
+		}
+/*
 		function onHandCreate(uid, x,y,z, t) {
 			f.handcreate([x,y,z]);
 		}
@@ -52,12 +61,12 @@
 			XBrowserAddHandler(plugin(), "HandUpdate", onHandUpdate);
 			XBrowserAddHandler(plugin(), "HandDestroy", onHandDestroy);
 		}
-	
+	*/
 		function doload()
 		{
 			debug.log("loaded");
 		}
-		
+	
 		-->
 		</script>
 
@@ -111,7 +120,7 @@
 	
     <div id="pluginContainer">
 		<object id="testPlugin" type="application/x-zig" width="0" height="0">
-			<param name="onload" value="pluginLoaded" />
+			<param name="onload" value="load" />
 		</object>
     </div>
 	<div>

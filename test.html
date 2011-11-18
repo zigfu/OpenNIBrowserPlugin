@@ -155,11 +155,7 @@
            document.getElementById("log").innerHTML = "adding events"
             injectPlugin($("#pluginContainer"), pluginLoaded);
 		
-			document.getElementById("testPlugin").addEventListener("WaveGesture", onWaveGesture, false);
-			document.getElementById("testPlugin").addEventListener("HandCreate", onHandCreate, false);
-			document.getElementById("testPlugin").addEventListener("HandUpdate", onHandUpdate, false);
-			document.getElementById("testPlugin").addEventListener("HandDestroy", onHandDestroy, false);
-			document.getElementById("log").innerHTML += "events added"
+
         }
 		
  
@@ -167,6 +163,11 @@
             markPassed("loaded");
             $("#pluginContainer").css("border", "1px solid black");
             //setTimeout(pluginRunTests, 500);
+			plugin().addEventListener("WaveGesture", onWaveGesture, false);
+			plugin().addEventListener("HandCreate", onHandCreate, false);
+			plugin().addEventListener("HandUpdate", onHandUpdate, false);
+			plugin().addEventListener("HandDestroy", onHandDestroy, false);
+			document.getElementById("log").innerHTML += "events added"
         }
         function pluginLoaded2() {
             markPassed("loaded2");

@@ -45,7 +45,16 @@ FB::VariantList ZigJS::PositionToVariant(XnPoint3D pos)
 FB::VariantList ZigJS::OrientationToVariant(XnMatrix3X3 ori)
 {
 	FB::VariantList result;
-	result.assign(ori.elements, ori.elements + 9);
+	result.push_back(ori.elements[0]);
+	result.push_back(ori.elements[3]);
+	result.push_back(ori.elements[6]);
+	result.push_back(ori.elements[1]);
+	result.push_back(ori.elements[4]);
+	result.push_back(ori.elements[7]);
+	result.push_back(ori.elements[2]);
+	result.push_back(ori.elements[5]);
+	result.push_back(ori.elements[8]);
+	//result.assign(ori.elements, ori.elements + 9);
 	return result;
 }
 
@@ -67,6 +76,8 @@ FB::VariantList ZigJS::GetJointsList(XnUserID userid)
 			joint["id"] = i;
 			joint["position"] = PositionToVariant(jointData.position.position);
 			joint["rotation"] = OrientationToVariant(jointData.orientation.orientation);
+			joint["positionconfidence"] = jointData.position.fConfidence;
+			joint["rotationconfidence"] = jointData.orientation.fConfidence;
 			result.push_back(joint);
 		}
 	}

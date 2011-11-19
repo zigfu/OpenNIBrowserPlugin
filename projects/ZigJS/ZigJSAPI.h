@@ -25,47 +25,31 @@ public:
 
     ZigJSPtr getPlugin();
 
-    // Read/Write property ${PROPERTY.ident}
-    std::string get_testString();
-    void set_testString(const std::string& val);
-
-    // Read-only property ${PROPERTY.ident}
-    std::string get_version();
-
-    // Method echo
-    FB::variant echo(const FB::variant& msg);
-    
     // Event helpers
 	FB_JSAPI_EVENT(WaveGesture, 3, (float,float,float));
 	FB_JSAPI_EVENT(HandCreate, 5, (int,float,float,float,float));
 	FB_JSAPI_EVENT(HandUpdate, 5, (int,float,float,float,float));
 	FB_JSAPI_EVENT(HandDestroy, 2, (int,float));
 
-    FB_JSAPI_EVENT(fired, 3, (const FB::variant&, bool, int));
-    FB_JSAPI_EVENT(echo, 2, (const FB::variant&, const int));
-    FB_JSAPI_EVENT(notify, 0, ());
+	FB_JSAPI_EVENT(UserEntered, 1, (int));
+	FB_JSAPI_EVENT(UserLeft, 1, (int));
+	FB_JSAPI_EVENT(UserTrackingStarted, 1, (int));
+	FB_JSAPI_EVENT(UserTrackingStopped, 1, (int));
 
-    // Method test-event
-    void testEvent(const FB::variant& s);
+	void onHandCreate(int handId, float x, float y, float z, float time);
+	void onHandUpdate(int handId, float x, float y, float z, float time);
+	void onHandDestroy(int handId, float time);
 
 	void setUsers(const FB::VariantList& users);
+	void onUserEntered(int userId);
+	void onUserLeft(int userId);
+	void onUserTrackingStarted(int userId);
+	void onUserTrackingStopped(int userId);
 private:
-
 	FB::variant m_users;
 
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
-
-	XnCallbackHandle m_gestureCB;
-	XnCallbackHandle m_handCB;
-
-
-    std::string m_testString;
-
-	static void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
-	static void XN_CALLBACK_TYPE HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
-	static void XN_CALLBACK_TYPE HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
-	static void XN_CALLBACK_TYPE HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie);
 };
 
 #endif // H_ZigJSAPI

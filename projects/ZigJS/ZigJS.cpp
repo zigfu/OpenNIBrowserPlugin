@@ -41,7 +41,6 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
 	s_gestures.AddGesture ("Click",  NULL); //no bounding box
 
-
 	XnStatus nRetVal = s_context.StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
@@ -90,10 +89,143 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 				}
 			}
 		}
-
-
 	}
 }
+
+void XN_CALLBACK_TYPE ZigJS::GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
+{
+	ZigJS::s_hands.StartTracking(*pEndPosition);
+}
+
+void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
+{
+	// send to listeners
+	{
+		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			ZigJSAPIPtr realPtr = i->lock();
+			if (realPtr) { 
+				realPtr->onHandCreate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
+				++i;
+			} else {
+				s_listeners.erase(i++);
+			}
+		}
+	}
+}
+
+void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
+{
+	// send to listeners
+	{
+		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			ZigJSAPIPtr realPtr = i->lock();
+			if (realPtr) { 
+				realPtr->onHandUpdate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
+				++i;
+			} else {
+				s_listeners.erase(i++);
+			}
+		}
+	}
+}
+
+void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
+{
+	// send to listeners
+	{
+		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			ZigJSAPIPtr realPtr = i->lock();
+			if (realPtr) { 
+				realPtr->onHandDestroy((int)user, (float)fTime);
+				++i;
+			} else {
+				s_listeners.erase(i++);
+			}
+		}
+	}
+}
+
+void XN_CALLBACK_TYPE ZigJS::OnNewUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie)
+{
+	generator.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
+
+	// send to listeners
+	{
+		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			ZigJSAPIPtr realPtr = i->lock();
+			if (realPtr) { 
+				realPtr->onUserEntered(nUserId);
+				++i;
+			} else {
+				s_listeners.erase(i++);
+			}
+		}
+	}
+}
+
+void XN_CALLBACK_TYPE ZigJS::OnLostUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie)
+{	
+		// send to listeners
+	{
+		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			ZigJSAPIPtr realPtr = i->lock();
+			if (realPtr) { 
+				realPtr->onUserLeft(nUserId);
+				++i;
+			} else {
+				s_listeners.erase(i++);
+			}
+		}
+	}
+
+}
+
+void XN_CALLBACK_TYPE ZigJS::OnPoseDetected(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie)
+{
+	// Stop detecting the pose
+	poseDetection.StopPoseDetection(nId);
+
+	// Start calibrating
+	s_users.GetSkeletonCap().RequestCalibration(nId, TRUE);
+}
+
+void XN_CALLBACK_TYPE ZigJS::OnCalibrationStart(xn::SkeletonCapability& skeleton, const XnUserID nUserId, void* pCookie)
+{
+}
+
+void XN_CALLBACK_TYPE ZigJS::OnCalibrationEnd(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie)
+{
+	// If this was a successful calibration
+	if (bSuccess) {
+		// start tracking
+		skeleton.StartTracking(nUserId);
+		
+		// send to listeners
+		{
+			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+			for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+				ZigJSAPIPtr realPtr = i->lock();
+				if (realPtr) { 
+					realPtr->onUserTrackingStarted(nUserId);
+					++i;
+				} else {
+					s_listeners.erase(i++);
+				}
+			}
+		}
+
+		
+	} else {
+		// Restart pose detection
+		s_users.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
+	}	
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJS::StaticInitialize()
@@ -156,8 +288,19 @@ void ZigJS::StaticInitialize()
 		FBLOG_INFO("xnInit", "ok get hands");
 	}
 
+	XnCallbackHandle ignore;
+
+	// register to gesture/hands callbacks
+	s_gestures.RegisterGestureCallbacks(&ZigJS::GestureRecognizedHandler, NULL, NULL, ignore);
+	s_hands.RegisterHandCallbacks(&ZigJS::HandCreateHandler, &ZigJS::HandUpdateHandler, &ZigJS::HandDestroyHandler, NULL, ignore);
+
+	s_users.RegisterUserCallbacks(&ZigJS::OnNewUser, OnLostUser, NULL, ignore);
+	s_users.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
+	s_users.GetSkeletonCap().RegisterCalibrationCallbacks(&ZigJS::OnCalibrationStart, &OnCalibrationEnd, NULL, ignore);
+	s_users.GetSkeletonCap().SetSmoothing(0.5);
+	s_users.GetPoseDetectionCap().RegisterToPoseCallbacks(&ZigJS::OnPoseDetected, NULL, NULL, ignore);
+
 	s_quit = false;
-	//nRetVal = xnOSCreateThread(threadproc, data, &handle);
 	nRetVal = xnOSCreateThread(OpenNIThread, NULL, &s_threadHandle);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail start thread");
@@ -167,7 +310,6 @@ void ZigJS::StaticInitialize()
 		FBLOG_DEBUG("xnInit", "ok start thread");
 	}
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////

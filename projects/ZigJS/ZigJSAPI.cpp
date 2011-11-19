@@ -13,7 +13,6 @@
 #include <boost/format.hpp>
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr host)
 ///
@@ -25,49 +24,9 @@
 /// @see FB::JSAPIAuto::registerEvent
 ///////////////////////////////////////////////////////////////////////////////
 
-
-void XN_CALLBACK_TYPE ZigJSAPI::GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
-{
-	((ZigJSAPI*)pCookie)->fire_WaveGesture(pEndPosition->X,pEndPosition->Y,pEndPosition->Z);
-	ZigJS::s_hands.StartTracking(*pEndPosition);
-}
-
-void XN_CALLBACK_TYPE ZigJSAPI::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
-{
-	((ZigJSAPI*)pCookie)->fire_HandCreate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
-}
-
-void XN_CALLBACK_TYPE ZigJSAPI::HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
-{
-	((ZigJSAPI*)pCookie)->fire_HandUpdate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
-}
-
-void XN_CALLBACK_TYPE ZigJSAPI::HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
-{
-	((ZigJSAPI*)pCookie)->fire_HandDestroy((int)user, (float)fTime);
-}
-
-
-
 ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host)
 {
-    registerMethod("echo",      make_method(this, &ZigJSAPI::echo));
-    registerMethod("testEvent", make_method(this, &ZigJSAPI::testEvent));
-
-    // Read-write property
-    registerProperty("testString",
-                     make_property(this,
-                        &ZigJSAPI::get_testString,
-                        &ZigJSAPI::set_testString));
-
-    // Read-only property
-    registerProperty("version",
-                     make_property(this,
-                        &ZigJSAPI::get_version));
-
-	
-	ZigJS::s_gestures.RegisterGestureCallbacks(&ZigJSAPI::GestureRecognizedHandler, NULL, this, m_gestureCB);
-	ZigJS::s_hands.RegisterHandCallbacks(&ZigJSAPI::HandCreateHandler, &ZigJSAPI::HandUpdateHandler, &ZigJSAPI::HandDestroyHandler, this, m_handCB);
+	// implicit "users" attribute
 }
 
 
@@ -81,8 +40,6 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 ///////////////////////////////////////////////////////////////////////////////
 ZigJSAPI::~ZigJSAPI()
 {
-	ZigJS::s_gestures.UnregisterGestureCallbacks(m_gestureCB);
-	ZigJS::s_hands.UnregisterHandCallbacks(m_handCB);
 }
 
 
@@ -103,38 +60,42 @@ ZigJSPtr ZigJSAPI::getPlugin()
     return plugin;
 }
 
-
-
-// Read/Write property testString
-std::string ZigJSAPI::get_testString()
-{
-    return m_testString;
-}
-void ZigJSAPI::set_testString(const std::string& val)
-{
-    m_testString = val;
-}
-
-// Read-only property version
-std::string ZigJSAPI::get_version()
-{
-    return (boost::format("%s: %d") % "test" % ZigJS::s_lastFrame).str();
-}
-
-// Method echo
-FB::variant ZigJSAPI::echo(const FB::variant& msg)
-{
-    static int n(0);
-    fire_echo(msg, n++);
-    return msg;
-}
-
-void ZigJSAPI::testEvent(const FB::variant& var)
-{
-    fire_fired(var, true, 1);
-}
-
 void ZigJSAPI::setUsers(const FB::VariantList& users)
 {
 	SetProperty("users", users);
+}
+
+void ZigJSAPI::onHandCreate(int handId, float x, float y, float z, float time)
+{
+	fire_HandCreate(handId, x, y, z, time);
+}
+
+void ZigJSAPI::onHandUpdate(int handId, float x, float y, float z, float time)
+{
+	fire_HandUpdate(handId, x, y, z, time);
+}
+
+void ZigJSAPI::onHandDestroy(int handId, float time)
+{
+	fire_HandDestroy(handId, time);
+}
+
+void ZigJSAPI::onUserEntered(int userId)
+{
+	fire_UserEntered(userId);
+}
+
+void ZigJSAPI::onUserLeft(int userId)
+{
+	fire_UserLeft(userId);
+}
+
+void ZigJSAPI::onUserTrackingStarted(int userId)
+{
+	fire_UserTrackingStarted(userId);
+}
+
+void ZigJSAPI::onUserTrackingStopped(int userId)
+{
+	fire_UserTrackingStopped(userId);
 }

@@ -48,6 +48,12 @@ private:
 	static void XN_CALLBACK_TYPE OnPoseDetected(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie);
 	static void XN_CALLBACK_TYPE OnCalibrationStart(xn::SkeletonCapability& skeleton, const XnUserID nUserId, void* pCookie);
 	static void XN_CALLBACK_TYPE OnCalibrationEnd(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie);
+
+	static FB::VariantList GetJointsList(XnUserID userid);
+	static FB::VariantList PositionToVariant(XnPoint3D pos);
+	static FB::VariantList OrientationToVariant(XnMatrix3X3 ori);
+	static FB::VariantList MakeUsersList();
+
 public:
 	static xn::Context s_context;
 	static xn::DepthGenerator s_depth;

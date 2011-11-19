@@ -36,6 +36,8 @@ public:
 	FB_JSAPI_EVENT(UserTrackingStarted, 1, (int));
 	FB_JSAPI_EVENT(UserTrackingStopped, 1, (int));
 
+	FB_JSAPI_EVENT(UserListUpdated, 0);
+
 	void onHandCreate(int handId, float x, float y, float z, float time);
 	void onHandUpdate(int handId, float x, float y, float z, float time);
 	void onHandDestroy(int handId, float time);

@@ -35,9 +35,70 @@ void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 
 const int MAX_USERS = 16;
 
+FB::VariantList ZigJS::PositionToVariant(XnPoint3D pos)
+{
+	FB::VariantList xyz;
+	xyz += pos.X, pos.Y, pos.Z;
+	return xyz;
+}
+
+FB::VariantList ZigJS::OrientationToVariant(XnMatrix3X3 ori)
+{
+	FB::VariantList result;
+	result.assign(ori.elements, ori.elements + 9);
+	return result;
+}
+
+FB::VariantList ZigJS::GetJointsList(XnUserID userid)
+{
+	FB::VariantList result;
+	XnSkeletonJointTransformation jointData;
+
+	// quick out if not tracking
+	if (!s_users.GetSkeletonCap().IsTracking(userid)) {
+		return result;
+	}
+
+	// head is the first, right foot the last. probably not the best way.
+	for (int i=XN_SKEL_HEAD; i<= XN_SKEL_RIGHT_FOOT; i++) {
+		if (s_users.GetSkeletonCap().IsJointAvailable((XnSkeletonJoint)i)) {
+			s_users.GetSkeletonCap().GetSkeletonJoint(userid, (XnSkeletonJoint)i, jointData);
+			FB::VariantMap joint;
+			joint["id"] = i;
+			joint["position"] = PositionToVariant(jointData.position.position);
+			joint["rotation"] = OrientationToVariant(jointData.orientation.orientation);
+			result.push_back(joint);
+		}
+	}
+
+	return result;
+}
+
+FB::VariantList ZigJS::MakeUsersList()
+{
+	// get the users
+	XnUInt16 nUsers = MAX_USERS;
+	XnUserID aUsers[MAX_USERS];
+	s_users.GetUsers(aUsers, nUsers);
+
+	// construct JS object
+	FB::VariantList jsUsers;
+	XnPoint3D pos;
+	for (int i = 0; i < nUsers; i++) {
+		s_users.GetCoM(aUsers[i], pos);
+		FB::VariantMap user;
+		user["tracked"] = s_users.GetSkeletonCap().IsTracking(aUsers[i]);
+		user["centerofmass"] = PositionToVariant(pos);
+		user["userid"] = aUsers[i];
+		user["joints"] = GetJointsList(aUsers[i]);
+		jsUsers += user;
+	}
+
+	return jsUsers;
+}
+
 unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 {
-	
 	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
 	s_gestures.AddGesture ("Click",  NULL); //no bounding box
 
@@ -60,22 +121,8 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 		s_depth.GetMetaData(md);
 		s_lastFrame = (int)md.FrameID();
 
-		// get the users
-		XnUInt16 nUsers = MAX_USERS;
-		XnUserID aUsers[MAX_USERS];
-		s_users.GetUsers(aUsers, nUsers);
-		// construct JS object
-		FB::VariantList jsUsers;
-		for (int i = 0; i < nUsers; i++) {
-			FB::VariantMap object;
-			XnPoint3D pos;
-			s_users.GetCoM(aUsers[i], pos);
-			FB::VariantList xyz;
-			xyz += pos.X, pos.Y, pos.Z;
-			object["centerOfMass"] = xyz;
-			object["uid"] = aUsers[i];
-			jsUsers += object;
-		}
+		FB::VariantList jsUsers = MakeUsersList();
+
 		// send to listeners
 		{
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);

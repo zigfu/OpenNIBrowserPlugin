@@ -29,8 +29,6 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	// implicit "users" attribute
 }
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJSAPI::~ZigJSAPI()
 ///
@@ -41,7 +39,6 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 ZigJSAPI::~ZigJSAPI()
 {
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJSPtr ZigJSAPI::getPlugin()
@@ -63,6 +60,7 @@ ZigJSPtr ZigJSAPI::getPlugin()
 void ZigJSAPI::setUsers(const FB::VariantList& users)
 {
 	SetProperty("users", users);
+	fire_UserListUpdated();
 }
 
 void ZigJSAPI::onHandCreate(int handId, float x, float y, float z, float time)

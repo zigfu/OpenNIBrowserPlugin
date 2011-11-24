@@ -37,19 +37,20 @@ public:
 	FB_JSAPI_EVENT(UserTrackingStopped, 1, (int));
 
 	FB_JSAPI_EVENT(UserListUpdated, 0);
+	FB_JSAPI_EVENT(HandListUpdated, 0);
 
 	void onHandCreate(int handId, float x, float y, float z, float time);
 	void onHandUpdate(int handId, float x, float y, float z, float time);
 	void onHandDestroy(int handId, float time);
 
+	void setHands(const FB::VariantList& hands);
 	void setUsers(const FB::VariantList& users);
+
 	void onUserEntered(int userId);
 	void onUserLeft(int userId);
 	void onUserTrackingStarted(int userId);
 	void onUserTrackingStopped(int userId);
 private:
-	FB::variant m_users;
-
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
 

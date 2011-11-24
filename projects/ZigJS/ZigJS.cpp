@@ -123,13 +123,14 @@ boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth)
 
 // END HUGE TODO
 
-
+std::list<HandPoint> ZigJS::s_handpoints;
 
 xn::Context ZigJS::s_context;
 xn::DepthGenerator ZigJS::s_depth;
 xn::GestureGenerator ZigJS::s_gestures;
 xn::HandsGenerator ZigJS::s_hands;
 xn::UserGenerator ZigJS::s_users;
+
 
 int ZigJS::s_lastFrame;
 XN_THREAD_HANDLE ZigJS::s_threadHandle = NULL;
@@ -212,12 +213,27 @@ FB::VariantList ZigJS::MakeUsersList()
 		FB::VariantMap user;
 		user["tracked"] = s_users.GetSkeletonCap().IsTracking(aUsers[i]);
 		user["centerofmass"] = PositionToVariant(pos);
-		user["userid"] = aUsers[i];
+		user["id"] = aUsers[i];
 		user["joints"] = GetJointsList(aUsers[i]);
 		jsUsers += user;
 	}
 
 	return jsUsers;
+}
+
+FB::VariantList ZigJS::MakeHandsList()
+{
+	FB::VariantList jsHands;
+
+	for(std::list<HandPoint>::iterator i = s_handpoints.begin(); i != s_handpoints.end(); i++) {
+		FB::VariantMap hand;
+		hand["id"] = i->handid;
+		hand["userid"] = i->userid;
+		hand["position"] = PositionToVariant(i->position);
+		jsHands += hand;
+	}
+
+	return jsHands;
 }
 
 unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
@@ -245,6 +261,7 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 		s_lastFrame = (int)md.FrameID();
 
 		FB::VariantList jsUsers = MakeUsersList();
+		FB::VariantList jsHands = MakeHandsList();
 		FB::variant imageData = *bitmap_from_depth(md);
 		// send to listeners
 		{
@@ -258,6 +275,7 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 								image->SetProperty("src", imageData);
 						}
 						realPtr->setUsers(jsUsers);
+						realPtr->setHands(jsHands);
 						++i;
 					} catch(FB::script_error) {
 						s_listeners.erase(i++); // remove from listeners list - it means the tab has probably unloaded already
@@ -271,6 +289,15 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 	}
 }
 
+XnUserID ZigJS::WhichUserDoesThisPointBelongTo(XnPoint3D point)
+{
+	XnPoint3D proj;
+	s_depth.ConvertRealWorldToProjective(1, &point, &proj);
+	xn::SceneMetaData smd;
+	s_users.GetUserPixels(0, smd);
+	return smd((XnUInt32)proj.X, (XnUInt32)proj.Y);
+}
+
 void XN_CALLBACK_TYPE ZigJS::GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
 {
 	ZigJS::s_hands.StartTracking(*pEndPosition);
@@ -278,6 +305,8 @@ void XN_CALLBACK_TYPE ZigJS::GestureRecognizedHandler(xn::GestureGenerator& gene
 
 void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
+	s_handpoints.push_back(HandPoint(user, WhichUserDoesThisPointBelongTo(*pPosition), *pPosition));
+
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -295,6 +324,17 @@ void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, Xn
 
 void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
+	// NOTE: user is actually handid - OpenNI ftl
+	for(std::list<HandPoint>::iterator i = s_handpoints.begin(); i != s_handpoints.end(); i++) {
+		if (i->handid == user) {
+			i->position.X = pPosition->X;
+			i->position.Y = pPosition->Y;
+			i->position.Z = pPosition->Z;
+			// TODO: possibly check for user id again in case its 0
+			break;
+		}
+	}
+
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -312,6 +352,14 @@ void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, Xn
 
 void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
 {
+	
+	for(std::list<HandPoint>::iterator i = s_handpoints.begin(); i != s_handpoints.end(); ) {
+		if (i->handid == user) {
+			s_handpoints.erase(i);
+			break;
+		}
+	}
+
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);

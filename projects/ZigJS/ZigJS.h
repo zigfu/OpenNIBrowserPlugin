@@ -20,6 +20,19 @@
 #include <XnCppWrapper.h>
 
 
+class HandPoint
+{
+public:
+	int handid;
+	int userid;
+	XnPoint3D position;
+	HandPoint(int handid, int userid, XnPoint3D position)
+		: handid(handid), userid(userid), position(position) 
+	{}
+
+};
+
+
 FB_FORWARD_PTR(ZigJS)
 
 FB_FORWARD_PTR(ZigJSAPI)
@@ -53,6 +66,12 @@ private:
 	static FB::VariantList PositionToVariant(XnPoint3D pos);
 	static FB::VariantList OrientationToVariant(XnMatrix3X3 ori);
 	static FB::VariantList MakeUsersList();
+	static FB::VariantList MakeHandsList();
+
+	static XnUserID WhichUserDoesThisPointBelongTo(XnPoint3D point);
+
+	// we keep a list of hand points
+	static std::list<HandPoint> s_handpoints;
 
 public:
 	static xn::Context s_context;

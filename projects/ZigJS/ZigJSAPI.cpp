@@ -64,6 +64,12 @@ void ZigJSAPI::setUsers(const FB::VariantList& users)
 	fire_UserListUpdated();
 }
 
+void ZigJSAPI::setHands(const FB::VariantList& hands)
+{
+	SetProperty("hands", hands);
+	fire_HandListUpdated();
+}
+
 void ZigJSAPI::onHandCreate(int handId, float x, float y, float z, float time)
 {
 	fire_HandCreate(handId, x, y, z, time);

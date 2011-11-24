@@ -27,6 +27,7 @@
 ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host)
 {
 	// implicit "users" attribute
+	registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -96,4 +97,10 @@ void ZigJSAPI::onUserTrackingStarted(int userId)
 void ZigJSAPI::onUserTrackingStopped(int userId)
 {
 	fire_UserTrackingStopped(userId);
+}
+
+//TODO: unhack
+void ZigJSAPI::setImage(FB::JSAPIPtr img)
+{
+	m_image = img;
 }

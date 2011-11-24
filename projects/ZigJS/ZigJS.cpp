@@ -13,6 +13,115 @@
 
 using namespace boost::assign;
 
+// TODO: MOVE OUT OF HERE
+static const char* base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+boost::shared_ptr<std::string> base64_encode(const char * dp, unsigned int size)
+{
+  boost::shared_ptr<std::string> output = boost::make_shared<std::string>("data:image/bmp;base64,");
+  std::string& outdata = *output;
+  outdata.reserve((outdata.size()) + ((size * 8) / 6) + 2);
+  std::string::size_type remaining = size;
+
+  while (remaining >= 3) {
+    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
+    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
+    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)]);
+    outdata.push_back(base64_charset[(dp[2] & 0x3f)]);
+    remaining -= 3; dp += 3;
+  }
+  
+  if (remaining == 2) {
+    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
+    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
+    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2)]);
+    outdata.push_back(base64_charset[64]);
+  } else if (remaining == 1) {
+    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
+    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4)]); 
+    outdata.push_back(base64_charset[64]);
+    outdata.push_back(base64_charset[64]);
+  }
+
+  return output;
+}
+
+
+// instead of understanding the format, we'll just replace the data from existing valid BMPs
+// ugly as hell, but will work just fine
+const unsigned char bitmap_header_qvga[] = {
+							 0x42, 0x4D, 0x36, 0x84, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 
+							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x40, 0x01, 
+							 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
+							 0x00, 0x00, 0x00, 0x00, 0x00, 0x84, 0x03, 0x00, 0x00, 0x00, 
+							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+							 0x00, 0x00, 0x00, 0x00
+							 };
+
+const unsigned char bitmap_header_vga[] = {
+							 0x42, 0x4D, 0x36, 0x10, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 
+							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x80, 0x02, 
+							 0x00, 0x00, 0xE0, 0x01, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
+							 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00, 0x00, 0x00, 
+							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+							 0x00, 0x00, 0x00, 0x00
+							 };
+boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth)
+{
+	unsigned long totalLength = depth.XRes() * depth.YRes() * 3;
+	bool VGA = depth.XRes() == 640;
+	// TODO: Code is ugly, I don't care much
+	if (VGA) {
+		totalLength += sizeof(bitmap_header_vga);
+	} else {
+		totalLength += sizeof(bitmap_header_qvga);
+	}
+
+	unsigned char * outputBuffer = new unsigned char[totalLength];
+	unsigned char * out = outputBuffer;
+	if (VGA) {
+		memcpy(outputBuffer, bitmap_header_vga, sizeof(bitmap_header_vga));
+		out += sizeof(bitmap_header_vga);
+	} else {
+		memcpy(outputBuffer, bitmap_header_qvga, sizeof(bitmap_header_qvga));
+		out += sizeof(bitmap_header_qvga);
+	}
+
+	const XnDepthPixel * in = depth.Data();
+	const XnDepthPixel maxDepth = 10000;
+
+	// simple copy loop - bitmap has its rows upside down, so we have to invert the rows
+	//for(unsigned long i = 0; i < depth.XRes()*depth.YRes(); i++, out += 3, in++) {
+	//	XnDepthPixel pix = *in;
+	//	unsigned char value = 0;
+	//	if (pix > 0) {
+	//		value = ((maxDepth - pix) * 256) / maxDepth;
+	//	}
+	//	out[0] = out[1] = out[2] = value;
+	//}
+	// invert rows copy loop
+	for(long y = depth.YRes() - 1; y >= 0 ; y--) {
+		const XnDepthPixel * in = depth.Data() + depth.XRes()*y;
+		for(long x = 0;
+			x < depth.XRes();
+			x++, out += 3, in++) {
+				XnDepthPixel pix = *in;
+				unsigned char value = 0;
+				if (pix > 0) {
+					value = ((maxDepth - pix) * 256) / maxDepth;
+				}
+				out[0] = out[1] = out[2] = value;
+			}
+	}
+	boost::shared_ptr<std::string> final = base64_encode((const char *)outputBuffer, totalLength);
+	delete[] outputBuffer;
+	return final;
+}
+
+// END HUGE TODO
+
+
+
 xn::Context ZigJS::s_context;
 xn::DepthGenerator ZigJS::s_depth;
 xn::GestureGenerator ZigJS::s_gestures;
@@ -133,7 +242,7 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 		s_lastFrame = (int)md.FrameID();
 
 		FB::VariantList jsUsers = MakeUsersList();
-
+		FB::variant imageData = *bitmap_from_depth(md);
 		// send to listeners
 		{
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -141,6 +250,9 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 				ZigJSAPIPtr realPtr = i->lock();
 				if (realPtr) { 
 					realPtr->setUsers(jsUsers);
+					if (realPtr->m_image) {
+						realPtr->m_image->SetProperty("src", imageData);
+					}
 					++i;
 				} else {
 					s_listeners.erase(i++);

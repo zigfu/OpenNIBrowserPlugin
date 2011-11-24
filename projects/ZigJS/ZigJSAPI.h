@@ -52,6 +52,11 @@ private:
 
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
+
+	//TODO: unhack
+public:
+	void setImage(FB::JSAPIPtr img);
+	FB::JSAPIPtr m_image;
 };
 
 #endif // H_ZigJSAPI

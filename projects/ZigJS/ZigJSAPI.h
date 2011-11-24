@@ -56,7 +56,11 @@ private:
 	//TODO: unhack
 public:
 	void setImage(FB::JSAPIPtr img);
+	FB::JSAPIPtr getImage() const;
+private:
 	FB::JSAPIPtr m_image;
+	mutable boost::recursive_mutex m_imageMutex;
+
 };
 
 #endif // H_ZigJSAPI

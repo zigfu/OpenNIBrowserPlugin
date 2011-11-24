@@ -106,11 +106,14 @@ boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth)
 			x < depth.XRes();
 			x++, out += 3, in++) {
 				XnDepthPixel pix = *in;
-				unsigned char value = 0;
-				if (pix > 0) {
-					value = ((maxDepth - pix) * 256) / maxDepth;
-				}
-				out[0] = out[1] = out[2] = value;
+				//unsigned char value = 0;
+				//if (pix > 0) {
+				//	value = ((maxDepth - pix) * 256) / maxDepth;
+				//}
+				//out[0] = out[1] = out[2] = value;
+				out[0] = 0;
+				out[1] = pix >> 8;
+				out[2] = pix & 0xff;
 			}
 	}
 	boost::shared_ptr<std::string> final = base64_encode((const char *)outputBuffer, totalLength);
@@ -248,12 +251,18 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
 			for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 				ZigJSAPIPtr realPtr = i->lock();
-				if (realPtr) { 
-					realPtr->setUsers(jsUsers);
-					if (realPtr->m_image) {
-						realPtr->m_image->SetProperty("src", imageData);
+				if (realPtr) {
+					try {
+						FB::JSAPIPtr image = realPtr->getImage();
+						if (image) {
+								image->SetProperty("src", imageData);
+						}
+						realPtr->setUsers(jsUsers);
+						++i;
+					} catch(FB::script_error) {
+						s_listeners.erase(i++); // remove from listeners list - it means the tab has probably unloaded already
 					}
-					++i;
+
 				} else {
 					s_listeners.erase(i++);
 				}

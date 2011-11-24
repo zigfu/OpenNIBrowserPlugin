@@ -102,5 +102,13 @@ void ZigJSAPI::onUserTrackingStopped(int userId)
 //TODO: unhack
 void ZigJSAPI::setImage(FB::JSAPIPtr img)
 {
+	boost::recursive_mutex::scoped_lock lock(m_imageMutex);
 	m_image = img;
 }
+
+FB::JSAPIPtr ZigJSAPI::getImage() const
+{
+	boost::recursive_mutex::scoped_lock lock(m_imageMutex);
+	return m_image;
+}
+

@@ -10,12 +10,43 @@ function $(id)
 	return document.getElementById(id);
 }
 
+function MySimpleHandPointControl()
+{
+	this.onSessionStart = function(focusPoint) {
+		console.log("Session start");
+	}
+	this.onSessionUpdate = function(hands) {
+		console.log("Session hands: " + hands.length);
+	}
+	this.onSessionEnd = function() {
+		console.log("Session end");
+	}
+}
+
 function ZigPluginLoaded()
 {
+	// init
 	console.log("Zig plugin loaded");
 	Zig.init($("ZigPlugin"));
 	console.log("ZigJS initialized");
+	
+	// create simple HPC per user
+	Zig.onNewUser = function(trackedUser) {
+		hpc = new MySimpleHandPointControl();
+		trackedUser.controls.AddHandPointControl(hpc);
+	}
+	/*
+	session = Zig.SingleSession();
+	session.user.attach(onSessionStart, function(focuspoint) { console.log(focuspoint) } )
+	session.user.Add(hpc);
+	
+	session2 = Zig.DualSession();
+	session2.player1.attach(onSessionStart, function(focuspoint) { console.log(focuspoint) } )
+	session2.player1.addlistener(hpcleft);
+	session2.right.add(hpcright);*/
 }
+
+
 
 </script>
 

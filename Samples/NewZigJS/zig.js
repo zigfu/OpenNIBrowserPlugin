@@ -22,12 +22,17 @@ function ZigControlList()
 {
 	this.handPointControls = [];
 	this.fullBodyControls = [];
+	this.isInHandpointSession = false;
+	this.focusPoint = [0,0,0];
 	
 	// public
 	
 	this.AddHandPointControl = function(control)
 	{
 		this.handPointControls.push(control);
+		if (this.isInHandpointSession) {
+			control.onSessionStart(this.focusPoint);
+		}
 	}
 	
 	this.AddFullBodyControl = function(control)
@@ -37,8 +42,8 @@ function ZigControlList()
 	
 	this.AddControl = function(control)
 	{
-		this.fullBodyControls.push(control);
-		this.handPointControls.push(control);
+		this.AddHandPointControl(control);
+		this.AddFullBodyControl(control);
 	}
 	
 	// internal callbacks
@@ -48,9 +53,11 @@ function ZigControlList()
 		this.fullBodyControls.every(function(control) { control.onSkeletonUpdate(skeleton) });
 	}
 	
-	this.onSessionStart = function(hands)
+	this.onSessionStart = function(focusPoint)
 	{
-		this.handPointControls.every(function(control) { control.onSessionStart(hands) });
+		this.isInHandpointSession = true;
+		this.focusPoint = focusPoint;
+		this.handPointControls.every(function(control) { control.onSessionStart(focusPoint) });
 	}
 	
 	this.onSessionUpdate = function(hands)
@@ -60,6 +67,7 @@ function ZigControlList()
 	
 	this.onSessionEnd = function()
 	{
+		this.isInHandpointSession = false;
 		this.handPointControls.every(function(control) { control.onSessionEnd() });
 	}
 	
@@ -90,7 +98,7 @@ function ZigTrackedUser()
 	{
 		// if we aren't in session, but should be
 		if (!this.isInHandpointSession && hands.length > 0) {
-			this.controls.onSessionStart(hands);
+			this.controls.onSessionStart(hands[0].position);
 			this.isInHandpointSession = true;
 		}
 		
@@ -141,11 +149,13 @@ function ZigUserTracker()
 	{
 		usertracker = this;
 		ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
-		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.users); });
+		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.hands); });
 	}
 	
 	this.ProcessNewUser = function(userid)
 	{
+		console.log("Zig: new user " + userid);
+	
 		// if we aren't tracking this user yet, start now
 		// (its possible that we are already tracking the user
 		//  from a previous hand point etc.)
@@ -157,6 +167,8 @@ function ZigUserTracker()
 
 	this.ProcessLostUser = function(userid)
 	{
+		console.log("Zig: lost user " + userid);
+		
 		if (this.isUserTracked(userid)) {
 			lost = this.trackedUsers[userid];
 			delete this.trackedUsers[userid];
@@ -166,8 +178,12 @@ function ZigUserTracker()
 
 	this.ProcessNewHand = function(handid, userid)
 	{
+		console.log("Zig: new hand " + handid);
+		
 		// no user id
 		if (userid <= 0) {
+			console.log("Zig: new hand belongs to non-tracked user");
+			
 			// get out if we dont allow such hands
 			if (!this.allowHandsForUntrackedUsers) return;
 			
@@ -181,11 +197,14 @@ function ZigUserTracker()
 		}
 		
 		// associate this hand with the user
+		console.log("Zig: new hand associated with user " + userid);
 		this.trackedHands[handid] = userid;
 	}
 
 	this.ProcessLostHand = function(handid)
 	{
+		console.log("Zig: lost hand");
+		
 		// remove the hand->user association
 		userid = this.trackedHands[handid];
 		delete this.trackedHands[handid];
@@ -193,6 +212,7 @@ function ZigUserTracker()
 		// if this user is "fake" (created for this specific 
 		// hand point) then get rid of it
 		if (!this.isRealUser(userid)) {
+			console.log("Zig: lost hand was with fake user, removing");
 			this.ProcessLostUser(userid);
 		}
 	}
@@ -209,8 +229,8 @@ function ZigUserTracker()
 		
 		// add new users
 		for (user in users) {
-			if (!this.isUserTracked(user.userid)) {
-				this.ProcessNewUser(user.userid);
+			if (!this.isUserTracked(users[user].id)) {
+				this.ProcessNewUser(users[user].id);
 			}
 		}
 
@@ -219,7 +239,7 @@ function ZigUserTracker()
 		
 		// update full body sessions
 		for (user in users) {
-			this.trackedUsers[user.userid].UpdateFullbody(user.joints);
+			this.trackedUsers[users[user].id].UpdateFullbody(users[user].joints);
 		}
 	}
 
@@ -234,7 +254,8 @@ function ZigUserTracker()
 		}
 		
 		// add new hands
-		for (hand in hands) {
+		for (handindex in hands) {
+			hand = hands[handindex];
 			if (undefined == this.trackedHands[hand.id]) {
 				this.ProcessNewHand(hand.id, hand.userid);
 			}
@@ -253,7 +274,7 @@ function ZigUserTracker()
 					currhands.push(this.getItemById(hands, handid));
 				}
 			}
-			this.trackedUsers[user.userid].UpdateHands(currhands);
+			this.trackedUsers[userid].UpdateHands(currhands);
 		}
 	}
 	
@@ -291,7 +312,7 @@ function ZigUserTracker()
 	this.getItemById = function(collection, id)
 	{
 		for (item in collection) {
-			if (item.userid == id) return item;
+			if (collection[item].id == id) return item;
 		}
 		return undefined;
 	}
@@ -317,7 +338,7 @@ function FullBodyControl()
 // Template control
 function HandPointControl()
 {
-	this.onSessionStart = function(hands) {
+	this.onSessionStart = function(sessionStartPosition) {
 		// DO SESSION START STUFF HERE
 	}
 	
@@ -333,11 +354,6 @@ function HandPointControl()
 // Fader
 function Fader(size, orientation)
 {
-	// const
-	this.OrientationX = 0;
-	this.OrientationY = 1;
-	this.OrientationZ = 2;
-
 	// var
 	this.size = size;
 	this.orientation = orientation;
@@ -353,8 +369,8 @@ function Fader(size, orientation)
 	this.onItemUnselected = function(item){};
 
 	// hand point control callbacks
-	this.onSessionStart = function(hands) {
-		this.center = hands[0];
+	this.onSessionStart = function(sessionStartPosition) {
+		this.center = sessionStartPosition;
 		this.selectedItem = Math.floor(this.itemsCount / 2);
 		this.onItemSelected(newSelected);
 	}
@@ -402,3 +418,6 @@ function Fader(size, orientation)
 //-----------------------------------------------------------------------------
 
 Zig = new ZigUserTracker();
+Zig.OrientationX = 0;
+Zig.OrientationY = 1;
+Zig.OrientationZ = 2;

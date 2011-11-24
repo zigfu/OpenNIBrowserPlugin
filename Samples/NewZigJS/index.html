@@ -1,0 +1,32 @@
+<html>
+<head>
+<title>ZigJS Tester</title>
+
+<script type="text/javascript" src="zig.js"></script>
+<script>
+
+function $(id)
+{
+	return document.getElementById(id);
+}
+
+function ZigPluginLoaded()
+{
+	console.log("Zig plugin loaded");
+	Zig.init($("ZigPlugin"));
+	console.log("ZigJS initialized");
+}
+
+</script>
+
+</head>
+<body>
+
+<div id="pluginContainer">
+	<object id="ZigPlugin" type="application/x-zig" width="0" height="0">
+		<param name="onload" value="ZigPluginLoaded" />
+	</object>
+</div>
+
+</body>
+</html>

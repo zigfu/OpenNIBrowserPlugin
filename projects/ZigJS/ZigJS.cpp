@@ -237,6 +237,7 @@ FB::VariantList ZigJS::MakeHandsList()
 }
 
 unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
+//void * ZigJS::OpenNIThread(void * dont_care)
 {
 	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
 	s_gestures.AddGesture ("Click",  NULL); //no bounding box
@@ -266,7 +267,7 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 		// send to listeners
 		{
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-			for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 				ZigJSAPIPtr realPtr = i->lock();
 				if (realPtr) {
 					try {
@@ -278,11 +279,11 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 						realPtr->setHands(jsHands);
 						++i;
 					} catch(FB::script_error) {
-						s_listeners.erase(i++); // remove from listeners list - it means the tab has probably unloaded already
+						i = s_listeners.erase(i); // remove from listeners list - it means the tab has probably unloaded already
 					}
 
 				} else {
-					s_listeners.erase(i++);
+					i = s_listeners.erase(i);
 				}
 			}
 		}
@@ -310,7 +311,7 @@ void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, Xn
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+		for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 			ZigJSAPIPtr realPtr = i->lock();
 			if (realPtr) { 
 				realPtr->onHandCreate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
@@ -338,7 +339,7 @@ void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, Xn
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+		for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 			ZigJSAPIPtr realPtr = i->lock();
 			if (realPtr) { 
 				realPtr->onHandUpdate((int)user,pPosition->X,pPosition->Y,pPosition->Z, (float)fTime);
@@ -363,7 +364,7 @@ void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, X
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+		for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 			ZigJSAPIPtr realPtr = i->lock();
 			if (realPtr) { 
 				realPtr->onHandDestroy((int)user, (float)fTime);
@@ -382,7 +383,7 @@ void XN_CALLBACK_TYPE ZigJS::OnNewUser(xn::UserGenerator& generator, const XnUse
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+		for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 			ZigJSAPIPtr realPtr = i->lock();
 			if (realPtr) { 
 				realPtr->onUserEntered(nUserId);
@@ -399,7 +400,7 @@ void XN_CALLBACK_TYPE ZigJS::OnLostUser(xn::UserGenerator& generator, const XnUs
 		// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-		for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+		for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 			ZigJSAPIPtr realPtr = i->lock();
 			if (realPtr) { 
 				realPtr->onUserLeft(nUserId);
@@ -435,7 +436,7 @@ void XN_CALLBACK_TYPE ZigJS::OnCalibrationEnd(xn::SkeletonCapability& skeleton, 
 		// send to listeners
 		{
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-			for(std::list<ZigJSAPIWeakPtr>::const_iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+			for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 				ZigJSAPIPtr realPtr = i->lock();
 				if (realPtr) { 
 					realPtr->onUserTrackingStarted(nUserId);
@@ -528,7 +529,7 @@ void ZigJS::StaticInitialize()
 	s_users.GetPoseDetectionCap().RegisterToPoseCallbacks(&ZigJS::OnPoseDetected, NULL, NULL, ignore);
 
 	s_quit = false;
-	nRetVal = xnOSCreateThread(OpenNIThread, NULL, &s_threadHandle);
+	nRetVal = xnOSCreateThread((void*(*)(void*))OpenNIThread, NULL, &s_threadHandle);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail start thread");
 		s_lastFrame = -7;
@@ -551,7 +552,8 @@ void ZigJS::StaticDeinitialize()
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
 	s_quit = true;
-	XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
+	//XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
+    XnStatus nRetVal = xnOSWaitForThreadExit(s_threadHandle, -1); // wait till quit
 	if (XN_STATUS_OK != nRetVal) {
 		FBLOG_DEBUG("deinit", "failed waiting on thread to quit");
 		return;

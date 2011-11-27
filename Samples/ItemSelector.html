@@ -25,7 +25,7 @@
 		var session = new SessionManager();
 		function load()
 		{
-			
+			debug.log("plugin loaded");
 			
 			//XBrowserAddHandler(plugin(), "HandCreate", function(n,x,y,z,t){session.rawHandCreate(n,x,y,z,t);});
 			XBrowserAddHandler(plugin(), "HandCreate", function(n,x,y,z,t){session.rawHandCreate(n,x,y,z,t);});

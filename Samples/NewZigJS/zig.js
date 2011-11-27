@@ -1,4 +1,18 @@
 //-----------------------------------------------------------------------------
+// Includes
+//-----------------------------------------------------------------------------
+function include(file)
+{
+	var script  = document.createElement('script');
+	script.src  = file;
+	script.type = 'text/javascript';
+	script.defer = true;
+	document.getElementsByTagName('head').item(0).appendChild(script);
+}
+
+include("sylvester.js");
+
+//-----------------------------------------------------------------------------
 // Helper functions
 //-----------------------------------------------------------------------------
 
@@ -35,9 +49,22 @@ function ZigControlList()
 		}
 	}
 	
+	this.RemoveHandPointControl = function(control)
+	{
+		removed = this.handPointControls.splice(this.handPointControls.indexOf(control), 1);
+		if (this.isInHandpointSession) {
+			removed[0].onSessionEnd();
+		}
+	}
+	
 	this.AddFullBodyControl = function(control)
 	{
 		this.fullBodyControls.push(control);
+	}
+	
+	this.RemoveFullBodyControl = function(control)
+	{
+		this.fullBodyControls.splice(this.fullBodyControls.indexOf(control), 1);
 	}
 	
 	this.AddControl = function(control)
@@ -46,7 +73,17 @@ function ZigControlList()
 		this.AddFullBodyControl(control);
 	}
 	
+	this.RemoveControl = function(control)
+	{
+		this.RemoveHandPointControl(control);
+		this.RemoveFullBodyControl(control);
+	}
+	
 	// internal callbacks
+	
+	this.onMove = function(position) {
+		this.fullBodyControls.every(function(control) { control.onMove(position); });
+	}
 	
 	this.onSkeletonUpdate = function(skeleton)
 	{
@@ -67,8 +104,8 @@ function ZigControlList()
 	
 	this.onSessionEnd = function()
 	{
-		this.isInHandpointSession = false;
 		this.handPointControls.every(function(control) { control.onSessionEnd() });
+		this.isInHandpointSession = false;
 	}
 	
 	// TODO: "ActiveControl" stuff
@@ -82,20 +119,27 @@ function ZigControlList()
 // A tracked user is created for every user we "see".
 //-----------------------------------------------------------------------------
 
-function ZigTrackedUser()
+function ZigTrackedUser(userid)
 {
 	this.controls = new ZigControlList();
 	this.skeleton = [];
 	this.hands = [];
+	this.userid = userid;
+	this.centerofmass = [];
 	this.isInHandpointSession = false;
 	
-	this.UpdateFullbody = function(skeleton)
+	this.UpdateFullbody = function(centerofmass, skeleton)
 	{
+		this.centerofmass = centerofmass;
+		this.skeleton = skeleton;
 		this.controls.onSkeletonUpdate(skeleton);
+		this.controls.onMove(centerofmass);
 	}
 	
 	this.UpdateHands = function(hands)
 	{
+		this.hands = hands;
+		
 		// if we aren't in session, but should be
 		if (!this.isInHandpointSession && hands.length > 0) {
 			this.controls.onSessionStart(hands[0].position);
@@ -140,34 +184,48 @@ function ZigUserTracker()
 	// with no associated userid?
 	this.allowHandsForUntrackedUsers = true;
 	
+	this.listeners = [];
+	
 	// public events
-	// TODO: make real events
-	this.onNewUser = function(trackedUser){};
-	this.onLostUser = function(trackedUser){};
+	// TODO: make real events (listeners for now)
+	this.onNewUser = function(trackedUser)
+	{
+		this.listeners.every(function(listener) { listener.onNewUser(trackedUser) });
+	}
+	
+	this.onLostUser = function(trackedUser)
+	{
+		this.listeners.every(function(listener) { listener.onLostUser(trackedUser) });
+	}
+	
+	this.onUpdate = function()
+	{
+		this.listeners.every(function(listener) { listener.onUpdate() });
+	}
 	
 	this.init = function(plugin) 
 	{
 		usertracker = this;
-		ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
 		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.hands); });
+		ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
 	}
 	
 	this.ProcessNewUser = function(userid)
 	{
-		console.log("Zig: new user " + userid);
+		this.log("Zig: new user " + userid);
 	
 		// if we aren't tracking this user yet, start now
 		// (its possible that we are already tracking the user
 		//  from a previous hand point etc.)
 		if (!this.isUserTracked(userid)) {
-			this.trackedUsers[userid] = new ZigTrackedUser();
+			this.trackedUsers[userid] = new ZigTrackedUser(userid);
 			this.onNewUser(this.trackedUsers[userid]);
 		}
 	}
 
 	this.ProcessLostUser = function(userid)
 	{
-		console.log("Zig: lost user " + userid);
+		this.log("Zig: lost user " + userid);
 		
 		if (this.isUserTracked(userid)) {
 			lost = this.trackedUsers[userid];
@@ -178,11 +236,11 @@ function ZigUserTracker()
 
 	this.ProcessNewHand = function(handid, userid)
 	{
-		console.log("Zig: new hand " + handid);
+		this.log("Zig: new hand " + handid);
 		
 		// no user id
 		if (userid <= 0) {
-			console.log("Zig: new hand belongs to non-tracked user");
+			this.log("Zig: new hand belongs to non-tracked user");
 			
 			// get out if we dont allow such hands
 			if (!this.allowHandsForUntrackedUsers) return;
@@ -197,13 +255,13 @@ function ZigUserTracker()
 		}
 		
 		// associate this hand with the user
-		console.log("Zig: new hand associated with user " + userid);
+		this.log("Zig: new hand associated with user " + userid);
 		this.trackedHands[handid] = userid;
 	}
 
 	this.ProcessLostHand = function(handid)
 	{
-		console.log("Zig: lost hand");
+		this.log("Zig: lost hand");
 		
 		// remove the hand->user association
 		userid = this.trackedHands[handid];
@@ -212,7 +270,7 @@ function ZigUserTracker()
 		// if this user is "fake" (created for this specific 
 		// hand point) then get rid of it
 		if (!this.isRealUser(userid)) {
-			console.log("Zig: lost hand was with fake user, removing");
+			this.log("Zig: lost hand was with fake user, removing");
 			this.ProcessLostUser(userid);
 		}
 	}
@@ -237,10 +295,12 @@ function ZigUserTracker()
 		// save raw data before updating the fullbody controls
 		this.rawUsers = users;
 		
-		// update full body sessions
+		// update stuff
 		for (user in users) {
-			this.trackedUsers[users[user].id].UpdateFullbody(users[user].joints);
+			this.trackedUsers[users[user].id].UpdateFullbody(users[user].centerofmass, users[user].joints);
 		}
+		
+		this.listeners.every(function(listener) { listener.onUpdate(); });
 	}
 
 	this.UpdateHands = function(hands)
@@ -315,6 +375,13 @@ function ZigUserTracker()
 			if (collection[item].id == id) return item;
 		}
 		return undefined;
+	}
+	
+	this.log = function(s)
+	{
+		if (this.verbose) {
+			console.log(s);
+		}
 	}
 }
 
@@ -414,10 +481,180 @@ function Fader(size, orientation)
 }
 
 //-----------------------------------------------------------------------------
+// "Engagement" managers
+//-----------------------------------------------------------------------------
+
+function ZigEngageSingleUser(userid)
+{	
+	// the session manager can be inited with a valid userid
+	// (for persisting state between pages, etc.)
+	if (undefined == userid) {
+		userid = 0;
+	}
+	
+	this.PrimaryUser = new ZigControlList();
+	this.userid = userid;
+	
+	this.onNewUser = function(trackeduser) {
+		// not tracking anyone yet?
+		if (0 == this.userid) {
+			// start now
+			this.userid = trackeduser.userid;
+			trackeduser.controls.AddControl(this.PrimaryUser);
+		}
+	}
+	
+	this.onLostUser = function(trackeduser) {
+		// lost the engaged user?
+		if (trackeduser.userid == this.userid) {
+			// bummer
+			this.userid = 0;
+		}
+	}
+}
+
+// NOTE: This needs to be rewritten; user control that waits till the user is in alone in a "region"
+// Init 2 of those per user, one for left and one for right
+function ZigEngageSideBySide(usertracker, leftuserid, rightuserid)
+{
+	this.usertracker = usertracker;
+	this.LeftUser = new ZigControlList();
+	this.RightUser = new ZigControlList();
+	this.leftuserid = (leftuserid == undefined ? 0 : leftuserid);
+	this.rightuserid = (rightuserid == undefined ? 0 : rightuserid);
+	
+	this.onUsersEngaged = function() {}
+	this.onUsersMissing = function() {}
+
+	this.leftUserIdealPosition = [-1000,1000,2000];
+	this.rightUserIdealPosition = [1000,1000,2000];
+
+	this.getUserClosestTo = function(trackedusers, position) 
+	{
+		minDistance = -1;
+		ret = 0;
+		for (userid in trackedusers) {
+			currDistance = $V(trackedusers[userid].centerofmass).distanceFrom($V(position));
+			if (-1 == minDistance || currDistance < minDistance) {
+				minDistance = currDistance;
+				ret = userid;
+			}
+		}
+	}
+	
+	this.onUpdate = function() {
+		// if not all users are engaged
+		allusersengaged = this.allUsersEngaged();
+		trackedusers = this.usertracker.trackedUsers;
+		if (!this.allUsersEngaged()) {
+			// check distance of each user from the "ideal" positions
+			closestLeft = this.getUserClosestTo(trackedusers, this.leftUserIdealPosition);
+			closestRight = this.getUserClosestTo(trackedusers, this.rightUserIdealPosition);
+			
+			// if the perfect user for both positions is the same
+			if (closestLeft == closestRight) {
+				// keep looking for another one
+				dLeft = $V(trackedusers[closestLeft].centerofmass).distanceFrom($V(this.leftUserIdealPosition));
+				dRight = $V(trackedusers[closestRight].centerofmass).distanceFrom($V(this.rightUserIdealPosition));
+				if (dLeft < dRight) {
+					closestRight = 0; 
+				} else {
+					closestLeft = 0;
+				}
+			}
+		}
+		
+		// should we fire the UsersEngaged event?
+		if (!allusersengaged && this.allUsersEngaged()) {
+			this.userTracker
+			this.onUsersEngaged();
+		}
+	}
+	
+	this.onLostUser = function(trackeduser) {
+		// is the lost user one of our engaged users?
+		allusersengaged = this.allUsersEngaged();
+		if (trackeduser.userid == this.leftuserid) {
+			this.leftuserid = 0;
+		}
+		if (trackeduser.userid == this.rightuserid) {
+			this.rightuserid = 0;
+		}
+		
+		// should we fire the UsersMissing event?
+		if (allusersengaged && !this.allUsersEngaged()) {
+			this.onUsersMissing();
+		}
+	}
+	
+	this.allUsersEngaged = function() {
+		return (this.leftuserid != 0 && this.rightuserid != 0);
+	}
+}
+
+function ZigEngageSingleSession(usertracker, userid)
+{
+	this.Controls = new ZigControlList();
+
+	// the session manager can be inited with a valid userid
+	// (for persisting state between pages, etc.)
+	if (undefined == userid) {
+		userid = 0;
+	} else {
+		usertracker.trackedUsers[userid].controls.AddControl(this.Controls);
+	}
+	
+	this.usertracker = usertracker;
+	this.userid = userid;
+	
+	this.onNewUser = function(trackeduser) {
+		// create a hand point control to do our "work" for us
+		WaitForSession = function(parent, user) { 
+			this.onSessionStart = function(focuspoint) { 
+				// no active user
+				if (parent.userid == 0) {
+					// now we do
+					parent.userid = user.userid;
+					user.controls.AddControl(parent.Controls);
+				}
+			}
+			this.onSessionEnd = function() {
+				// active user was us
+				if (parent.userid == user.userid) {
+					// not anymore
+					parent.userid = 0;
+					user.controls.RemoveControl(parent.Controls);
+				}
+			}
+			this.onSessionUpdate = function() {}
+		}
+		trackeduser.controls.AddHandPointControl(new WaitForSession(this, trackeduser));
+	}
+	
+	this.onLostUser = function(trackeduser) {
+		// lost the engaged user?
+		if (trackeduser.userid == this.userid) {
+			// bummer
+			this.userid = 0;
+		}
+	}
+	
+	this.onUpdate = function() {}
+}
+
+//-----------------------------------------------------------------------------
 // Actual zig object
 //-----------------------------------------------------------------------------
 
 Zig = new ZigUserTracker();
+
+// "Session managers"
+Zig.SingleUser = new ZigEngageSingleSession(Zig);
+Zig.SideBySide = new ZigEngageSideBySide(Zig);
+Zig.listeners.push(Zig.SingleUser);
+Zig.listeners.push(Zig.SideBySide);
+
 Zig.OrientationX = 0;
 Zig.OrientationY = 1;
 Zig.OrientationZ = 2;
+Zig.verbose = true;

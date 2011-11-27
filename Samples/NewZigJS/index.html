@@ -30,11 +30,15 @@ function ZigPluginLoaded()
 	Zig.init($("ZigPlugin"));
 	console.log("ZigJS initialized");
 	
+	hpc = new MySimpleHandPointControl();
+	Zig.SingleUser.Controls.AddHandPointControl(hpc);
+	
+	/*
 	// create simple HPC per user
 	Zig.onNewUser = function(trackedUser) {
 		hpc = new MySimpleHandPointControl();
 		trackedUser.controls.AddHandPointControl(hpc);
-	}
+	}*/
 	/*
 	session = Zig.SingleSession();
 	session.user.attach(onSessionStart, function(focuspoint) { console.log(focuspoint) } )
@@ -59,5 +63,11 @@ function ZigPluginLoaded()
 	</object>
 </div>
 
+<div id="allUsers">
+
+</div>
+<div id="engagedUser">
+
+</div>
 </body>
 </html>

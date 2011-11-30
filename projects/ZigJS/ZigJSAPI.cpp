@@ -61,13 +61,11 @@ ZigJSPtr ZigJSAPI::getPlugin()
 void ZigJSAPI::setUsers(const FB::VariantList& users)
 {
 	SetProperty("users", users);
-	fire_UserListUpdated();
 }
 
 void ZigJSAPI::setHands(const FB::VariantList& hands)
 {
 	SetProperty("hands", hands);
-	fire_HandListUpdated();
 }
 
 void ZigJSAPI::onHandCreate(int handId, float x, float y, float z, float time)

@@ -235,8 +235,15 @@ FB::VariantList ZigJS::MakeHandsList()
 
 	return jsHands;
 }
+#ifdef _WIN32
+// windows threads expect DWORD return value
+typedef unsigned long thread_ret_t;
+#else
+// pthreads expects void* return value
+typedef void *thread_ret_t;
+#endif
 
-unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
+thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 //void * ZigJS::OpenNIThread(void * dont_care)
 {
 	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
@@ -277,6 +284,7 @@ unsigned long XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 						}
 						realPtr->setUsers(jsUsers);
 						realPtr->setHands(jsHands);
+						realPtr->fire_NewFrame();
 						++i;
 					} catch(FB::script_error) {
 						i = s_listeners.erase(i); // remove from listeners list - it means the tab has probably unloaded already
@@ -529,7 +537,7 @@ void ZigJS::StaticInitialize()
 	s_users.GetPoseDetectionCap().RegisterToPoseCallbacks(&ZigJS::OnPoseDetected, NULL, NULL, ignore);
 
 	s_quit = false;
-	nRetVal = xnOSCreateThread((void*(*)(void*))OpenNIThread, NULL, &s_threadHandle);
+	nRetVal = xnOSCreateThread((XN_THREAD_PROC_PROTO)OpenNIThread, NULL, &s_threadHandle);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail start thread");
 		s_lastFrame = -7;

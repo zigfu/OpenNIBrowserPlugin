@@ -126,6 +126,8 @@
 				scene.add( camera );
 
 				texture = new THREE.Texture( img );
+				texture.minFilter = THREE.NearestFilter;
+				texture.magFilter = THREE.NearestFilter;
 
 				var width = 320, height = 240;
 				//var nearClipping = 850/*850*/, farClipping = 4000/*4000*/;
@@ -229,7 +231,7 @@
         function pluginLoaded() {
 			
 			plugin().setImage(img);
-			plugin().addEventListener("UserListUpdated", function() { 
+			plugin().addEventListener("NewFrame", function() { 
 				img = new Image();
 				img.onload = function() { 
 					if (texture) {

@@ -34,84 +34,67 @@ function ZigAddHandler(target,eventName,handlerName)
 
 function ZigControlList()
 {
-	this.handPointControls = [];
-	this.fullBodyControls = [];
+	this.listeners = [];
 	this.isInHandpointSession = false;
 	this.focusPoint = [0,0,0];
 	
 	// public
 	
-	this.AddHandPointControl = function(control)
+	this.AddControl = function(control)
 	{
-		this.handPointControls.push(control);
+		this.listeners.push(control);
 		if (this.isInHandpointSession) {
 			control.onSessionStart(this.focusPoint);
 		}
 	}
 	
-	this.RemoveHandPointControl = function(control)
+	this.RemoveControl = function(control)
 	{
-		removed = this.handPointControls.splice(this.handPointControls.indexOf(control), 1);
+		removed = this.listeners.splice(this.listeners.indexOf(control), 1);
 		if (this.isInHandpointSession) {
 			removed[0].onSessionEnd();
 		}
 	}
 	
-	this.AddFullBodyControl = function(control)
+	this.DoUpdate = function(trackedUser)
 	{
-		this.fullBodyControls.push(control);
+		hands = trackedUser.hands;
+
+		// if we aren't in session, but should be
+		if (!this.isInHandpointSession && hands.length > 0) {
+			this.isInHandpointSession = true;
+			this.focusPoint = hands[0].position;
+			this.listeners.forEach(function(control) { control.onSessionStart(this.focusPoint) });
+		}
+		
+		// if we are in session, but shouldn't be
+		if (this.isInHandpointSession && hands.length == 0) {
+			this.listeners.forEach(function(control) { control.onSessionEnd() });
+			this.isInHandpointSession = false;
+		}
+	
+		// at this point we know if we are in a session or not,
+		// and we sent the start/end notifications. all thats
+		// left is updating the controls if we're in session
+		if (this.isInHandpointSession) {
+			this.listeners.forEach(function(control) { control.onSessionUpdate(hands) });
+		}
+		
+		this.listeners.forEach(function(control) { control.onDoUpdate(trackedUser); });
 	}
 	
-	this.RemoveFullBodyControl = function(control)
+	// this allows nesting control lists
+	this.onDoUpdate = function(trackedUser)
 	{
-		this.fullBodyControls.splice(this.fullBodyControls.indexOf(control), 1);
-	}
+		this.DoUpdate(trackedUser);
+	}	
 	
-	this.AddControl = function(control)
-	{
-		this.AddHandPointControl(control);
-		this.AddFullBodyControl(control);
-	}
+	this.onSessionStart = function(focuspoint) { }
+	this.onSessionUpdate = function(hands) {}
+	this.onSessionEnd = function() {}
 	
-	this.RemoveControl = function(control)
-	{
-		this.RemoveHandPointControl(control);
-		this.RemoveFullBodyControl(control);
-	}
-	
-	// internal callbacks
-	
-	this.onMove = function(position) {
-		this.fullBodyControls.every(function(control) { control.onMove(position); });
-	}
-	
-	this.onSkeletonUpdate = function(skeleton)
-	{
-		this.fullBodyControls.every(function(control) { control.onSkeletonUpdate(skeleton) });
-	}
-	
-	this.onSessionStart = function(focusPoint)
-	{
-		this.isInHandpointSession = true;
-		this.focusPoint = focusPoint;
-		this.handPointControls.every(function(control) { control.onSessionStart(focusPoint) });
-	}
-	
-	this.onSessionUpdate = function(hands)
-	{
-		this.handPointControls.every(function(control) { control.onSessionUpdate(hands) });
-	}
-	
-	this.onSessionEnd = function()
-	{
-		this.handPointControls.every(function(control) { control.onSessionEnd() });
-		this.isInHandpointSession = false;
-	}
-	
-	// TODO: "ActiveControl" stuff
-	// SetActiveControl();
-	// Back();
-	// pass the TrackedUser and ControlList in every event?
+	// TODO: "FocusedControl" stuff
+	// TODO: pass the TrackedUser and ControlList in every event
 }
 
 //-----------------------------------------------------------------------------
@@ -132,32 +115,16 @@ function ZigTrackedUser(userid)
 	{
 		this.centerofmass = centerofmass;
 		this.skeleton = skeleton;
-		this.controls.onSkeletonUpdate(skeleton);
-		this.controls.onMove(centerofmass);
 	}
 	
 	this.UpdateHands = function(hands)
 	{
 		this.hands = hands;
-		
-		// if we aren't in session, but should be
-		if (!this.isInHandpointSession && hands.length > 0) {
-			this.controls.onSessionStart(hands[0].position);
-			this.isInHandpointSession = true;
-		}
-		
-		// if we are in session, but shouldn't be
-		if (this.isInHandpointSession && hands.length == 0) {
-			this.controls.onSessionEnd();
-			this.isInHandpointSession = false;
-		}
+	}
 	
-		// at this point we know if we are in a session or not,
-		// and we sent the start/end notifications. all thats
-		// left is updating the controls if we're in session
-		if (this.isInHandpointSession) {
-			this.controls.onSessionUpdate(hands);
-		}
+	this.NotifyListeners = function()
+	{
+		this.controls.DoUpdate(this);
 	}
 }
 
@@ -190,24 +157,26 @@ function ZigUserTracker()
 	// TODO: make real events (listeners for now)
 	this.onNewUser = function(trackedUser)
 	{
-		this.listeners.every(function(listener) { listener.onNewUser(trackedUser) });
+		this.listeners.forEach(function(listener) { listener.onNewUser(trackedUser) });
 	}
 	
 	this.onLostUser = function(trackedUser)
 	{
-		this.listeners.every(function(listener) { listener.onLostUser(trackedUser) });
+		this.listeners.forEach(function(listener) { listener.onLostUser(trackedUser) });
 	}
 	
 	this.onUpdate = function()
 	{
-		this.listeners.every(function(listener) { listener.onUpdate() });
+		this.listeners.forEach(function(listener) { listener.onUpdate() });
 	}
 	
 	this.init = function(plugin) 
 	{
 		usertracker = this;
-		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.hands); });
-		ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
+		//ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.hands); });
+		//ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
+		//ZigAddHandler(plugin, "NewFrame", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
+		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
 	}
 	
 	this.ProcessNewUser = function(userid)
@@ -280,7 +249,7 @@ function ZigUserTracker()
 		// get rid of old users
 		for (userid in this.trackedUsers) {
 			curruser = this.getItemById(users, userid);
-			if (undefined == curruser) {
+			if (undefined == curruser && this.isRealUser(userid)) {
 				this.ProcessLostUser(userid);
 			}
 		}
@@ -299,8 +268,6 @@ function ZigUserTracker()
 		for (user in users) {
 			this.trackedUsers[users[user].id].UpdateFullbody(users[user].centerofmass, users[user].joints);
 		}
-		
-		this.listeners.every(function(listener) { listener.onUpdate(); });
 	}
 
 	this.UpdateHands = function(hands)
@@ -336,6 +303,14 @@ function ZigUserTracker()
 			}
 			this.trackedUsers[userid].UpdateHands(currhands);
 		}
+	}
+	
+	this.DoUpdate = function(users, hands)
+	{
+		this.UpdateUsers(users);
+		this.UpdateHands(hands);
+		this.trackedUsers.forEach(function(trackedUser) { trackedUser.NotifyListeners(); });
+		this.listeners.forEach(function(listener) { listener.onUpdate(); });
 	}
 	
 	// does this user actually exist in the acquisition layer?
@@ -511,6 +486,8 @@ function ZigEngageSingleUser(userid)
 			this.userid = 0;
 		}
 	}
+	
+	this.onUpdate = function() {}
 }
 
 // NOTE: This needs to be rewritten; user control that waits till the user is in alone in a "region"
@@ -594,7 +571,7 @@ function ZigEngageSideBySide(usertracker, leftuserid, rightuserid)
 
 function ZigEngageSingleSession(usertracker, userid)
 {
-	this.Controls = new ZigControlList();
+	this.controls = new ZigControlList();
 
 	// the session manager can be inited with a valid userid
 	// (for persisting state between pages, etc.)
@@ -615,7 +592,7 @@ function ZigEngageSingleSession(usertracker, userid)
 				if (parent.userid == 0) {
 					// now we do
 					parent.userid = user.userid;
-					user.controls.AddControl(parent.Controls);
+					user.controls.AddControl(parent.controls);
 				}
 			}
 			this.onSessionEnd = function() {
@@ -623,12 +600,13 @@ function ZigEngageSingleSession(usertracker, userid)
 				if (parent.userid == user.userid) {
 					// not anymore
 					parent.userid = 0;
-					user.controls.RemoveControl(parent.Controls);
+					user.controls.RemoveControl(parent.controls);
 				}
 			}
 			this.onSessionUpdate = function() {}
+			this.onDoUpdate = function() { }
 		}
-		trackeduser.controls.AddHandPointControl(new WaitForSession(this, trackeduser));
+		trackeduser.controls.AddControl(new WaitForSession(this, trackeduser));
 	}
 	
 	this.onLostUser = function(trackeduser) {
@@ -640,6 +618,13 @@ function ZigEngageSingleSession(usertracker, userid)
 	}
 	
 	this.onUpdate = function() {}
+	
+	this.Reset = function() {
+		if (this.userid != 0) {
+			this.userTracker.trackedUsers[this.userid].controls.RemoveControl(this.Controls);
+			this.userid = 0;
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -652,7 +637,7 @@ Zig = new ZigUserTracker();
 Zig.SingleUser = new ZigEngageSingleSession(Zig);
 Zig.SideBySide = new ZigEngageSideBySide(Zig);
 Zig.listeners.push(Zig.SingleUser);
-Zig.listeners.push(Zig.SideBySide);
+//Zig.listeners.push(Zig.SideBySide);
 
 Zig.OrientationX = 0;
 Zig.OrientationY = 1;

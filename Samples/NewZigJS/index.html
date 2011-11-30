@@ -21,6 +21,7 @@ function MySimpleHandPointControl()
 	this.onSessionEnd = function() {
 		console.log("Session end");
 	}
+	this.onDoUpdate = function() {}
 }
 
 function ZigPluginLoaded()
@@ -31,26 +32,8 @@ function ZigPluginLoaded()
 	console.log("ZigJS initialized");
 	
 	hpc = new MySimpleHandPointControl();
-	Zig.SingleUser.Controls.AddHandPointControl(hpc);
-	
-	/*
-	// create simple HPC per user
-	Zig.onNewUser = function(trackedUser) {
-		hpc = new MySimpleHandPointControl();
-		trackedUser.controls.AddHandPointControl(hpc);
-	}*/
-	/*
-	session = Zig.SingleSession();
-	session.user.attach(onSessionStart, function(focuspoint) { console.log(focuspoint) } )
-	session.user.Add(hpc);
-	
-	session2 = Zig.DualSession();
-	session2.player1.attach(onSessionStart, function(focuspoint) { console.log(focuspoint) } )
-	session2.player1.addlistener(hpcleft);
-	session2.right.add(hpcright);*/
+	//Zig.SingleUser.controls.AddControl(hpc);
 }
-
-
 
 </script>
 

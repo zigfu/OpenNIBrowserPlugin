@@ -19,6 +19,13 @@
 #include <XnLog.h>
 #include <XnCppWrapper.h>
 
+#ifdef _WIN32
+// windows threads expect DWORD return value
+typedef unsigned long thread_ret_t;
+#else
+// pthreads expects void* return value
+typedef void *thread_ret_t;
+#endif
 
 class HandPoint
 {
@@ -42,7 +49,7 @@ class ZigJS : public FB::PluginCore
 private:
 
 
-	static unsigned long XN_CALLBACK_TYPE OpenNIThread(void * instance);
+	static thread_ret_t XN_CALLBACK_TYPE OpenNIThread(void * instance);
 
 	static XN_THREAD_HANDLE s_threadHandle;
 

@@ -253,7 +253,7 @@ thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
 		s_lastFrame = -1;
-		return -1;
+		return (thread_ret_t)(-1);
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
 	}

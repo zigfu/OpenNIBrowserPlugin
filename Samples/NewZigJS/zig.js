@@ -56,42 +56,28 @@ function ZigControlList()
 		}
 	}
 	
-	this.DoUpdate = function(trackedUser)
-	{
-		var hands = trackedUser.hands;
-
-		// if we aren't in session, but should be
-		if (!this.isInHandpointSession && hands.length > 0) {
-			this.isInHandpointSession = true;
-			this.focusPoint = hands[0].position;
-			this.listeners.forEach(function(control) { control.onSessionStart(this.focusPoint) });
-		}
-		
-		// if we are in session, but shouldn't be
-		if (this.isInHandpointSession && hands.length == 0) {
-			this.listeners.forEach(function(control) { control.onSessionEnd() });
-			this.isInHandpointSession = false;
-		}
-	
-		// at this point we know if we are in a session or not,
-		// and we sent the start/end notifications. all thats
-		// left is updating the controls if we're in session
-		if (this.isInHandpointSession) {
-			this.listeners.forEach(function(control) { control.onSessionUpdate(hands) });
-		}
-		
-		this.listeners.forEach(function(control) { control.onDoUpdate(trackedUser); });
-	}
-	
 	// this allows nesting control lists
 	this.onDoUpdate = function(trackedUser)
 	{
-		this.DoUpdate(trackedUser);
+		this.listeners.forEach(function(control) { control.onDoUpdate(trackedUser); });
 	}	
 	
-	this.onSessionStart = function(focuspoint) { }
-	this.onSessionUpdate = function(hands) {}
-	this.onSessionEnd = function() {}
+	this.onSessionStart = function(focuspoint) 
+	{
+		this.isInHandpointSession = true;
+		this.listeners.forEach(function(control) { control.onSessionStart(focuspoint) });
+	}
+	
+	this.onSessionUpdate = function(hands) 
+	{
+		this.listeners.forEach(function(control) { control.onSessionUpdate(hands) });
+	}
+	
+	this.onSessionEnd = function() 
+	{
+		this.listeners.forEach(function(control) { control.onSessionEnd() });	
+		this.isInHandpointSession = false;
+	}
 	
 	// TODO: "FocusedControl" stuff
 	// TODO: pass the TrackedUser and ControlList in every event
@@ -124,7 +110,27 @@ function ZigTrackedUser(userid)
 	
 	this.NotifyListeners = function()
 	{
-		this.controls.DoUpdate(this);
+		// if we aren't in session, but should be
+		if (!this.isInHandpointSession && this.hands.length > 0) {
+			this.isInHandpointSession = true;
+			var focusPoint = this.hands[0].position;
+			this.controls.onSessionStart(focusPoint);
+		}
+		
+		// if we are in session, but shouldn't be
+		if (this.isInHandpointSession && this.hands.length == 0) {
+			this.controls.onSessionEnd();
+			this.isInHandpointSession = false;
+		}
+	
+		// at this point we know if we are in a session or not,
+		// and we sent the start/end notifications. all thats
+		// left is updating the controls if we're in session
+		if (this.isInHandpointSession) {
+			this.controls.onSessionUpdate(this.hands);
+		}
+		
+		this.controls.onDoUpdate(this);
 	}
 }
 
@@ -176,7 +182,8 @@ function ZigUserTracker()
 		//ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.hands); });
 		//ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
 		ZigAddHandler(plugin, "NewFrame", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
-		//ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
+		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
+		this.log("Zig: inited");
 	}
 	
 	this.ProcessNewUser = function(userid)
@@ -369,7 +376,7 @@ function FullBodyControl()
 {
 	this.onSkeletonUpdate = function(skeleton) 
 	{
-		// DO SKELETON RELATED SHIT HERE
+		// DO SKELETON RELATED STUFF HERE
 	}
 }
 
@@ -402,7 +409,7 @@ function Fader(size, orientation)
 	this.value = 0;
 	this.center = [0,0,0];
 	this.itemsCount = 1;
-	this.hysteresis = 0.3;
+	this.hysteresis = 0.1;
 	this.selectedItem = 0;
 
 	// events
@@ -414,11 +421,11 @@ function Fader(size, orientation)
 	this.onSessionStart = function(sessionStartPosition) {
 		this.center = sessionStartPosition;
 		this.selectedItem = Math.floor(this.itemsCount / 2);
-		this.onItemSelected(newSelected);
+		this.onItemSelected(this.selectedItem);
 	}
 
 	this.onSessionUpdate = function(hands) {
-		var position = hands[0];
+		var position = hands[0].position;
 		var distanceFromCenter = position[this.orientation] - this.center[this.orientation];
 		var ret = distanceFromCenter / this.size + 0.5;
 		this.value = 1 - this.clamp(ret, 0, 1);
@@ -441,9 +448,11 @@ function Fader(size, orientation)
 		}
 	}
 
-	this.onSessionDestroy = function() {
+	this.onSessionEnd = function() {
 		this.onItemUnselected(this.selectedItem);
 	}
+	
+	this.onDoUpdate = function() {};
 	
 	// internal functions
 	
@@ -638,6 +647,8 @@ Zig.SingleUser = new ZigEngageSingleSession(Zig);
 Zig.SideBySide = new ZigEngageSideBySide(Zig);
 Zig.listeners.push(Zig.SingleUser);
 //Zig.listeners.push(Zig.SideBySide);
+
+Zig.Fader = Fader;
 
 Zig.OrientationX = 0;
 Zig.OrientationY = 1;

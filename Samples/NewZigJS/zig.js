@@ -50,7 +50,7 @@ function ZigControlList()
 	
 	this.RemoveControl = function(control)
 	{
-		removed = this.listeners.splice(this.listeners.indexOf(control), 1);
+		var removed = this.listeners.splice(this.listeners.indexOf(control), 1);
 		if (this.isInHandpointSession) {
 			removed[0].onSessionEnd();
 		}
@@ -58,7 +58,7 @@ function ZigControlList()
 	
 	this.DoUpdate = function(trackedUser)
 	{
-		hands = trackedUser.hands;
+		var hands = trackedUser.hands;
 
 		// if we aren't in session, but should be
 		if (!this.isInHandpointSession && hands.length > 0) {
@@ -172,11 +172,11 @@ function ZigUserTracker()
 	
 	this.init = function(plugin) 
 	{
-		usertracker = this;
+		var usertracker = this;
 		//ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.UpdateHands(plugin.hands); });
 		//ZigAddHandler(plugin, "UserListUpdated", function () { usertracker.UpdateUsers(plugin.users); });
-		//ZigAddHandler(plugin, "NewFrame", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
-		ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
+		ZigAddHandler(plugin, "NewFrame", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
+		//ZigAddHandler(plugin, "HandListUpdated", function () { usertracker.DoUpdate(plugin.users, plugin.hands); });
 	}
 	
 	this.ProcessNewUser = function(userid)
@@ -233,7 +233,7 @@ function ZigUserTracker()
 		this.log("Zig: lost hand");
 		
 		// remove the hand->user association
-		userid = this.trackedHands[handid];
+		var userid = this.trackedHands[handid];
 		delete this.trackedHands[handid];
 		
 		// if this user is "fake" (created for this specific 
@@ -248,8 +248,8 @@ function ZigUserTracker()
 	{
 		// get rid of old users
 		for (userid in this.trackedUsers) {
-			curruser = this.getItemById(users, userid);
-			if (undefined == curruser && this.isRealUser(userid)) {
+			var curruser = this.getItemById(users, userid);
+			if (undefined === curruser && this.isRealUser(userid)) {
 				this.ProcessLostUser(userid);
 			}
 		}
@@ -274,16 +274,16 @@ function ZigUserTracker()
 	{
 		// get rid of old hands
 		for (handid in this.trackedHands) {
-			currhand = this.getItemById(hands, handid);
-			if (undefined == currhand) {
+			var currhand = this.getItemById(hands, handid);
+			if (undefined === currhand) {
 				this.ProcessLostHand(handid);
 			}
 		}
 		
 		// add new hands
 		for (handindex in hands) {
-			hand = hands[handindex];
-			if (undefined == this.trackedHands[hand.id]) {
+			var hand = hands[handindex];
+			if (undefined === this.trackedHands[hand.id]) {
 				this.ProcessNewHand(hand.id, hand.userid);
 			}
 		}
@@ -295,7 +295,7 @@ function ZigUserTracker()
 		// go through list of users
 		for (userid in this.trackedUsers) {
 			// find hands belonging to this user
-			currhands = [];
+			var currhands = [];
 			for (handid in this.trackedHands) {
 				if (this.trackedHands[handid] == userid) {
 					currhands.push(this.getItemById(hands, handid));
@@ -332,14 +332,14 @@ function ZigUserTracker()
 	this.lastFakeUserId = 1337;
 	this.getFakeUserId = function()
 	{
-		ret = this.lastFakeUserId;
+		var ret = this.lastFakeUserId;
 		this.lastFakeUserId++;
 		return ret;
 	}
 	
 	this.containsId = function(collection, id)
 	{
-		return (this.getItemById(collection, id) != undefined);
+		return (this.getItemById(collection, id) !== undefined);
 	}
 	
 	// TODO: change from "userid" to "id" so it will work for both hands
@@ -347,7 +347,7 @@ function ZigUserTracker()
 	this.getItemById = function(collection, id)
 	{
 		for (item in collection) {
-			if (collection[item].id == id) return item;
+			if (collection[item].id == id) return collection[item];
 		}
 		return undefined;
 	}
@@ -418,15 +418,15 @@ function Fader(size, orientation)
 	}
 
 	this.onSessionUpdate = function(hands) {
-		position = hands[0];
-		distanceFromCenter = position[this.orientation] - this.center[this.orientation];
-		ret = distanceFromCenter / this.size + 0.5;
+		var position = hands[0];
+		var distanceFromCenter = position[this.orientation] - this.center[this.orientation];
+		var ret = distanceFromCenter / this.size + 0.5;
 		this.value = 1 - this.clamp(ret, 0, 1);
 
-		newSelected = this.selectedItem;
+		var newSelected = this.selectedItem;
 		
-		minValue = (this.selectedItem * (1 / this.itemsCount)) - this.hysteresis;
-		maxValue = (this.selectedItem + 1) * (1 / this.itemsCount) + this.hysteresis;
+		var minValue = (this.selectedItem * (1 / this.itemsCount)) - this.hysteresis;
+		var maxValue = (this.selectedItem + 1) * (1 / this.itemsCount) + this.hysteresis;
 		if (this.value > maxValue) {
 			newSelected++;
 		}
@@ -508,8 +508,8 @@ function ZigEngageSideBySide(usertracker, leftuserid, rightuserid)
 
 	this.getUserClosestTo = function(trackedusers, position) 
 	{
-		minDistance = -1;
-		ret = 0;
+		var minDistance = -1;
+		var ret = 0;
 		for (userid in trackedusers) {
 			currDistance = $V(trackedusers[userid].centerofmass).distanceFrom($V(position));
 			if (-1 == minDistance || currDistance < minDistance) {
@@ -521,18 +521,18 @@ function ZigEngageSideBySide(usertracker, leftuserid, rightuserid)
 	
 	this.onUpdate = function() {
 		// if not all users are engaged
-		allusersengaged = this.allUsersEngaged();
-		trackedusers = this.usertracker.trackedUsers;
+		var allusersengaged = this.allUsersEngaged();
+		var trackedusers = this.usertracker.trackedUsers;
 		if (!this.allUsersEngaged()) {
 			// check distance of each user from the "ideal" positions
-			closestLeft = this.getUserClosestTo(trackedusers, this.leftUserIdealPosition);
-			closestRight = this.getUserClosestTo(trackedusers, this.rightUserIdealPosition);
+			var closestLeft = this.getUserClosestTo(trackedusers, this.leftUserIdealPosition);
+			var closestRight = this.getUserClosestTo(trackedusers, this.rightUserIdealPosition);
 			
 			// if the perfect user for both positions is the same
 			if (closestLeft == closestRight) {
 				// keep looking for another one
-				dLeft = $V(trackedusers[closestLeft].centerofmass).distanceFrom($V(this.leftUserIdealPosition));
-				dRight = $V(trackedusers[closestRight].centerofmass).distanceFrom($V(this.rightUserIdealPosition));
+				var dLeft = $V(trackedusers[closestLeft].centerofmass).distanceFrom($V(this.leftUserIdealPosition));
+				var dRight = $V(trackedusers[closestRight].centerofmass).distanceFrom($V(this.rightUserIdealPosition));
 				if (dLeft < dRight) {
 					closestRight = 0; 
 				} else {
@@ -550,7 +550,7 @@ function ZigEngageSideBySide(usertracker, leftuserid, rightuserid)
 	
 	this.onLostUser = function(trackeduser) {
 		// is the lost user one of our engaged users?
-		allusersengaged = this.allUsersEngaged();
+		var allusersengaged = this.allUsersEngaged();
 		if (trackeduser.userid == this.leftuserid) {
 			this.leftuserid = 0;
 		}
@@ -575,7 +575,7 @@ function ZigEngageSingleSession(usertracker, userid)
 
 	// the session manager can be inited with a valid userid
 	// (for persisting state between pages, etc.)
-	if (undefined == userid) {
+	if (undefined === userid) {
 		userid = 0;
 	} else {
 		usertracker.trackedUsers[userid].controls.AddControl(this.Controls);
@@ -586,7 +586,7 @@ function ZigEngageSingleSession(usertracker, userid)
 	
 	this.onNewUser = function(trackeduser) {
 		// create a hand point control to do our "work" for us
-		WaitForSession = function(parent, user) { 
+		var WaitForSession = function(parent, user) { 
 			this.onSessionStart = function(focuspoint) { 
 				// no active user
 				if (parent.userid == 0) {

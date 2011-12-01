@@ -1,0 +1,126 @@
+<html>
+<head>
+<title>ZigJS Tester</title>
+<script type="text/javascript" src="zig.js"></script>
+<script>
+function sumMatrix(mat) {
+	var sum = 0;
+	elements = mat.elements
+	for(var i in elements) {
+		for(var j in elements[i]) {
+			sum += elements[i][j];
+		}
+	}
+	return sum;
+}
+// Reference: Oliver K. Smith: Eigenvalues of a symmetric 3 × 3 matrix. Commun. ACM 4(4): 168 (1961) 
+// find the eigenvalues of a 3x3 symmetric matrix
+function getEigenvalues(mat) {
+	var m = mat.trace() / 3;
+    var K = mat.subtract( Matrix.I(3).x(m)); // K = mat - I*tr(mat)
+    var q = K.determinant() / 2;
+    var tempForm = K.x(K);
+ 
+	var p = sumMatrix(tempForm) / 6;
+ 
+    // NB in Smith's paper he uses phi = (1/3)*arctan(sqrt(p*p*p - q*q)/q), which is equivalent to below:
+    var phi = (1/3)*Math.acos(q/Math.sqrt(p*p*p));
+ 
+    if (Math.abs(q) >= Math.abs(Math.sqrt(p*p*p))) {
+        phi = 0;
+	}
+ 
+    if (phi < 0) {
+        phi = phi + Math.PI/3;
+	}
+ 
+    var eig1 = m + 2*Math.sqrt(p)*Math.cos(phi);
+    var eig2 = m - Math.sqrt(p)*(Math.cos(phi) + Math.sqrt(3)*Math.sin(phi));
+    var eig3 = m - Math.sqrt(p)*(Math.cos(phi) - Math.sqrt(3)*Math.sin(phi));
+ 
+    return [eig1, eig2, eig3];
+}
+
+function getCofactorMatrix(mat) {
+	var dims = mat.dimensions();
+	var xSize = dims.cols;
+	var ySize = dims.rows;
+	var output = mat.map(function(x, i, j) { return mat.minor(i+1,j+1,xSize-1, ySize-1).determinant(); } );
+	return output;
+}
+
+function getStddevs(vectors) {
+	if (vectors.length == 0) { return []; }
+	var sum = Vector.Zero(vectors[0].dimensions());
+	for(k in vectors) {
+		sum = sum.add(vectors[k]);
+	}
+	var avg = sum.multiply(1/(vectors.length));
+	var covarianceMatrix = Matrix.Zero(avg.dimensions(), avg.dimensions());
+	for(k in vectors) {
+		var temp = vectors[k].subtract(avg);
+		covarianceMatrix = covarianceMatrix.map(function(x, i, j) { return x + temp.elements[i-1]*temp.elements[j-1]; } );
+	}
+	var values = getEigenvalues(covarianceMatrix);
+	for (key in values) {
+		values[key] = Math.sqrt(Math.abs(values[key]));
+	}
+	return values;
+}
+
+function SteadyDetectorHPC()
+{
+	this.frameCount = 15;
+	this.pointBuffer = [];
+	this.steady = false;
+	this.onSessionStart = function(focusPoint) {
+		console.log("Session start");
+		this.pointBuffer = [];
+		this.steady = false;
+	}
+	this.onSessionUpdate = function(hands) {
+		if (this.pointBuffer.push($V(hands[0].position)) > this.frameCount) {
+			this.pointBuffer.shift();
+		}
+		pb = this.pointBuffer;
+		var steadyThisFrame = true;
+		var stdDevs = getStddevs(this.pointBuffer);
+		for(var k in stdDevs) {
+			steadyThisFrame &= stdDevs[k] < 50;
+		}
+		if (steadyThisFrame && (!this.steady)) {
+			this.steady = true;
+			console.log("Steady!");
+		} else if (!steadyThisFrame && this.steady) {
+			this.steady = false;
+			console.log("moving!");
+		}
+	}
+	this.onSessionEnd = function() {
+		console.log("Session end");
+	}
+	this.onDoUpdate = function() {}
+}
+
+function crap() {
+	console.log("Zig plugin loaded");
+	Zig.init(document.getElementById("ZigPlugin"));
+	console.log("ZigJS initialized");
+	
+	hpc = new SteadyDetectorHPC();
+	Zig.SingleUser.controls.AddControl(hpc);
+}
+</script>
+
+</head>
+<body onload='crap()'>
+<div id="pluginContainer">
+	<object id="ZigPlugin" type="application/x-zig" width="0" height="0">
+		<param name="onload" value="ZigPluginLoaded" />
+	</object>
+</div>
+<div id="engagedUser">
+
+</div>
+</body>
+</html>

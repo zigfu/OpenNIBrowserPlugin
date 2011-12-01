@@ -1,0 +1,140 @@
+<html>
+<head>
+	<!-- jquery -->
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js"></script>
+	<script>window.jQuery || document.write('<script src="js/jquery.min.js"><\/script>')</script>
+
+	<!-- anything slider -->
+	<link rel="stylesheet" href="css/anythingslider.css">
+	<script src="js/jquery.anythingslider.js"></script>
+
+	<!-- ZigJS -->
+	<script type="text/javascript" src="zig.js"></script>
+	
+	<style>
+	#myslider { width: 700px; height: 450px; }
+
+	.menu{margin:0; padding:0; width:450px; list-style:none;background:rgb();}
+	.menu li {padding:2; margin:0 0 1px 0; height:40px; display:block; }
+	.menu li a {text-align:;height:40px; padding:0px 25px; font:16px Verdana, Arial, Helvetica, sans-serif; color:rgb(); display:block; background:url('images/verMenuImages.png') 0px 0px no-repeat; text-decoration:none;}
+	.menu li a:hover {background:url('images/verMenuImages.png') 0px -40px no-repeat; color:rgb();}
+	.menu li a.highlighted {background:url('images/verMenuImages.png') 0px -40px no-repeat; color:rgb();}
+	.menu li a.active, .menu li a.active:hover{background:url('images/verMenuImages.png') 0px -80px no-repeat; color:rgb();}
+	.menu li a span {line-height:40px;}
+
+	</style>
+
+	<script>
+		$(function(){
+			$('#myslider').anythingSlider({
+				resizeContents      : false,
+				autoPlay			: false,
+				buildStartStop		: false,
+			});
+			
+			add(["Home", "Something", "Very", "Cool"]);
+		});
+		
+		function addToAnythingslider(toAdd) {
+			$("#myslider").append("<li>" + toAdd + "</li>");
+			$("#myslider").data('AnythingSlider').updateSlider();
+		}
+		
+		function removeLastItemInAnythingSlider() {
+			$("#myslider li:not(.cloned)").last().remove();
+			$("#myslider").data('AnythingSlider').updateSlider();
+		}
+		
+		function add(items) {
+			var newMenu = makeMenu(items);
+			addToAnythingslider(newMenu);
+		}
+		
+		function remove() {
+			
+			$("#myslider li.panel:not(.cloned)").last().remove();
+			$("#myslider").data('AnythingSlider').updateSlider();
+		}
+
+		function makeMenu(items) {
+			var res = "";
+			for (i in items) {
+				res += "<li><a href='#' class='menuitem'><span>" + items[i] + "</span></a></li>";
+			}
+			return "<ul class='menu'>" + res + "</ul>";
+		}
+		
+		function getActivePanel() {
+			var res = $("#myslider li.activePage");
+			if (res.length == 0) {
+				res = $("#myslider li.panel");
+			}
+			return res;
+		}
+		
+		function getActiveMenuItems() {
+			return $(getActivePanel()).find("li a.menuitem");
+		}
+		
+		function menuChanged(slider) 
+		{
+			f.itemsCount = getActiveMenuItems().length;
+			console.log("Menu changed. New menu item count : " + f.itemsCount);
+		}
+		
+		function backDone(slider)
+		{
+			menuChanged(slider);
+			remove();
+		}
+		
+		function navigateTo(items) {
+			if (items === undefined) {
+				items = ["Test1", "Test2", "Test3", "Test4", "Test5"];
+			}
+			add(items);
+			$("#myslider").data('AnythingSlider').goForward(false, menuChanged);
+		}
+		
+		function navigateBack() {
+			$("#myslider").data('AnythingSlider').goBack(false, backDone);
+		}
+				
+		function ZigPluginLoaded() {
+			Zig.init(document.getElementById("ZigPlugin"));
+		
+			// fader to control the menu
+			f = new Zig.Fader(250, Zig.OrientationY);
+			f.itemsCount = getActiveMenuItems().length;
+			Zig.SingleUser.controls.AddControl(f);
+			f.onItemSelected = function(item) {
+				console.log("ItemSelected: " + item);
+				$(getActiveMenuItems()).eq(item).addClass("highlighted");
+			};
+			
+			f.onItemUnselected = function(item) {
+				console.log("ItemUnselected: " + item);
+				$(getActiveMenuItems()).eq(item).removeClass("highlighted");
+			};
+		}
+		
+	</script> 
+</head>
+
+<body>
+
+<ul id="myslider">
+</ul>
+
+<br><br>
+<input type="button" value="Add" onclick="navigateTo()" />
+<input type="button" value="Remove" onclick="navigateBack()" />
+
+<div id="pluginContainer">
+	<object id="ZigPlugin" type="application/x-zig" width="0" height="0">
+		<param name="onload" value="ZigPluginLoaded" />
+	</object>
+</div>
+
+</body>
+</html>

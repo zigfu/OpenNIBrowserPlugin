@@ -66,19 +66,18 @@ const unsigned char bitmap_header_vga[] = {
 							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 							 0x00, 0x00, 0x00, 0x00
 							 };
-boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth)
+// hack - bitmap headers are both the same length...
+const unsigned long bmp_header_size = sizeof(bitmap_header_vga); 
+
+
+boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth, const xn::SceneMetaData& users)
 {
-	unsigned long totalLength = depth.XRes() * depth.YRes() * 3;
+	unsigned long totalLength = bmp_header_size + (depth.XRes() * depth.YRes() * 3);
 	bool VGA = depth.XRes() == 640;
-	// TODO: Code is ugly, I don't care much
-	if (VGA) {
-		totalLength += sizeof(bitmap_header_vga);
-	} else {
-		totalLength += sizeof(bitmap_header_qvga);
-	}
 
 	unsigned char * outputBuffer = new unsigned char[totalLength];
 	unsigned char * out = outputBuffer;
+	// TODO: Code is ugly, I don't care much
 	if (VGA) {
 		memcpy(outputBuffer, bitmap_header_vga, sizeof(bitmap_header_vga));
 		out += sizeof(bitmap_header_vga);
@@ -87,31 +86,22 @@ boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth)
 		out += sizeof(bitmap_header_qvga);
 	}
 
-	const XnDepthPixel * in = depth.Data();
-	const XnDepthPixel maxDepth = 10000;
+	// TODO: unused?
+	//const XnDepthPixel maxDepth = ZigJS::s_depth.GetDeviceMaxDepth();
 
 	// simple copy loop - bitmap has its rows upside down, so we have to invert the rows
-	//for(unsigned long i = 0; i < depth.XRes()*depth.YRes(); i++, out += 3, in++) {
-	//	XnDepthPixel pix = *in;
-	//	unsigned char value = 0;
-	//	if (pix > 0) {
-	//		value = ((maxDepth - pix) * 256) / maxDepth;
-	//	}
-	//	out[0] = out[1] = out[2] = value;
-	//}
 	// invert rows copy loop
 	for(long y = depth.YRes() - 1; y >= 0 ; y--) {
+
 		const XnDepthPixel * in = depth.Data() + depth.XRes()*y;
+		// assume labelmap is the same resolution as the depth map
+		const XnLabel * inUsers = users.Data() + users.XRes()*y;
+
 		for(long x = 0;
 			x < depth.XRes();
-			x++, out += 3, in++) {
+			++x, out += 3, ++in, ++inUsers) {
 				XnDepthPixel pix = *in;
-				//unsigned char value = 0;
-				//if (pix > 0) {
-				//	value = ((maxDepth - pix) * 256) / maxDepth;
-				//}
-				//out[0] = out[1] = out[2] = value;
-				out[0] = 0;
+				out[0] = (unsigned char)(*inUsers); // assuming we'll never pass 256 in the label
 				out[1] = pix >> 8;
 				out[2] = pix & 0xff;
 			}
@@ -257,7 +247,8 @@ thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
 	}
-	xn::DepthMetaData md;
+	xn::DepthMetaData depthMD;
+	xn::SceneMetaData sceneMD;
 
 	while(!s_quit) {
 		s_context.WaitAndUpdateAll();
@@ -265,15 +256,20 @@ thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 			FBLOG_INFO("xnInit", "fail wait & update");
 			break;
 		} 
-		s_depth.GetMetaData(md);
-		s_lastFrame = (int)md.FrameID();
+		s_depth.GetMetaData(depthMD);
+		s_users.GetUserPixels(0, sceneMD);
+		s_lastFrame = (int)depthMD.FrameID();
 
 		FB::VariantList jsUsers = MakeUsersList();
 		FB::VariantList jsHands = MakeHandsList();
-		FB::variant imageData = *bitmap_from_depth(md);
+		
 		// send to listeners
 		{
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+			if (s_listeners.empty()) {
+				continue;
+			}
+			FB::variant imageData = *bitmap_from_depth(depthMD, sceneMD); // do this only if we have work to do
 			for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 				ZigJSAPIPtr realPtr = i->lock();
 				if (realPtr) {

@@ -78,7 +78,8 @@
 				vec4 color = texture2D( map, vUv );
 				//gl_FragColor = vec4( 1.0 - (abs(color.r - 0.5) * 2), color.g * 6, color.b, smoothstep( 8000.0, -8000.0, gl_FragCoord.z / gl_FragCoord.w ) );
 				float val = color.r;
-				gl_FragColor = vec4( abs(color.r - 0.5) * 2.0, (color.g * 6.0), 1.0 - (abs(color.r - 0.5) * 2.0) , smoothstep( 8000.0, -8000.0, gl_FragCoord.z / gl_FragCoord.w ) );
+				//gl_FragColor = vec4( abs(color.r - 0.5) * 2.0, (color.g * 6.0), 1.0 - (abs(color.r - 0.5) * 2.0) , smoothstep( 8000.0, -8000.0, gl_FragCoord.z / gl_FragCoord.w ) );
+				gl_FragColor = vec4( abs(color.r - 0.5) * 2.0, ceil(color.b), 1.0 - (abs(color.r - 0.5) * 2.0) , smoothstep( 8000.0, -8000.0, gl_FragCoord.z / gl_FragCoord.w ) );
 
 			}
 
@@ -94,7 +95,6 @@
 			var stats;
 
 			var video, texture;
-			img = new Image();
 
 			if ( Detector.webgl ) {
 
@@ -125,7 +125,7 @@
 				camera.position.set( 0, 0, 500 );
 				scene.add( camera );
 
-				texture = new THREE.Texture( img );
+				texture = new THREE.Texture( new Image() );
 				texture.minFilter = THREE.NearestFilter;
 				texture.magFilter = THREE.NearestFilter;
 
@@ -230,16 +230,17 @@
  
         function pluginLoaded() {
 			
-			plugin().setImage(img);
+			plugin().setImage(new Image());
 			plugin().addEventListener("NewFrame", function() { 
-				img = new Image();
-				img.onload = function() { 
+				var img2 = new Image();
+				img2.onload = function() {
+					img2.onload = null; //break reference loop
 					if (texture) {
-						texture.image = this;
+						texture.image = img2;
 						texture.needsUpdate = true; 
 					}
 				};
-				plugin().setImage(img);
+				plugin().setImage(img2);
 			}, false);
         }
 

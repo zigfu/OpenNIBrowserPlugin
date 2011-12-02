@@ -194,11 +194,18 @@
 				.add(base.$nav)
 				.add(base.$startStop)
 				.add(base.$forward)
-				.add(base.$back)[(base.pages <= 1) ? 'hide' : 'show']();
-			if (base.pages > 1) {
+				.add(base.$back)[(base.pages <= 0) ? 'hide' : 'show']();
+			//if (base.pages > 1) {
 				// Build/update navigation tabs
 				base.buildNavigation();
-			}
+			//}
+			
+			// show/hide navigation if necessary
+			var hideright = base.$items.eq(base.currentPage-1).attr("hideright");
+			var hideleft = base.$items.eq(base.currentPage-1).attr("hideleft");
+			base.$forward[(hideright) ? 'hide' : 'show']();
+			base.$back[(hideleft) ? 'hide' : 'show']();
+
 
 			// Top and tail the list with 'visible' number of items, top has the last section, and tail has the first
 			// This supports the "infinite" scrolling, also ensures any cloned elements don't duplicate an ID
@@ -241,11 +248,11 @@
 
 		// Creates the numbered navigation links
 		base.buildNavigation = function() {
-			if (o.buildNavigation && (base.pages > 1)) {
+			if (o.buildNavigation /*&& (base.pages > 1)*/) {
 				var t, $a;
 				base.$items.filter(':not(.cloned)').each(function(i) {
 					var index = i + 1;
-					t = ((index === 1) ? 'first' : '') + ((index === base.pages) ? 'last' : '');
+					t = ((index === 1) ? 'first ' : '') + ((index === base.pages) ? 'last' : '');
 					$a = $('<a href="#"></a>').addClass('panel' + index).wrap('<li class="' + t + '" />');
 					base.$nav.append($a.parent()); // use $a.parent() so it will add <li> instead of only the <a> to the <ul>
 
@@ -543,6 +550,12 @@
 
 			if (!base.hovered) { base.slideControls(false); }
 
+			// show/hide arrows
+			var hideright = base.$currentPage.attr("hideright");
+			var hideleft = base.$currentPage.attr("hideleft");
+			base.$forward[(hideright) ? 'hide' : 'show']();
+			base.$back[(hideleft) ? 'hide' : 'show']();
+			
 			if (time >= 0) { base.$el.trigger('slide_complete', base); }
 			// callback from external slide control: $('#slider').anythingSlider(4, function(slider){ })
 			if (typeof callback === 'function') { callback(base); }

@@ -12,6 +12,10 @@ function include(file)
 
 include("sylvester.js");
 
+OrientationX = 0;
+OrientationY = 1;
+OrientationZ = 2;
+
 //-----------------------------------------------------------------------------
 // Helper functions
 //-----------------------------------------------------------------------------
@@ -35,6 +39,7 @@ function ZigAddHandler(target,eventName,handlerName)
 function ZigControlList()
 {
 	this.listeners = [];
+	this.focusedControl = undefined;
 	this.isInHandpointSession = false;
 	this.focusPoint = [0,0,0];
 	
@@ -42,6 +47,8 @@ function ZigControlList()
 	
 	this.AddControl = function(control)
 	{
+		if (undefined === control) return;
+		
 		this.listeners.push(control);
 		if (this.isInHandpointSession) {
 			control.onSessionStart(this.focusPoint);
@@ -50,6 +57,8 @@ function ZigControlList()
 	
 	this.RemoveControl = function(control)
 	{
+		if (undefined === control) return;
+		
 		var removed = this.listeners.splice(this.listeners.indexOf(control), 1);
 		if (this.isInHandpointSession) {
 			removed[0].onSessionEnd();
@@ -57,30 +66,32 @@ function ZigControlList()
 	}
 	
 	// this allows nesting control lists
-	this.onDoUpdate = function(trackedUser)
-	{
+	this.onDoUpdate = function(trackedUser) {
 		this.listeners.forEach(function(control) { control.onDoUpdate(trackedUser); });
 	}	
 	
-	this.onSessionStart = function(focuspoint) 
-	{
+	this.onSessionStart = function(focuspoint) {
 		this.isInHandpointSession = true;
+		this.focusPoint = focuspoint;
 		this.listeners.forEach(function(control) { control.onSessionStart(focuspoint) });
 	}
 	
-	this.onSessionUpdate = function(hands) 
-	{
+	this.onSessionUpdate = function(hands) {
 		this.listeners.forEach(function(control) { control.onSessionUpdate(hands) });
 	}
 	
-	this.onSessionEnd = function() 
-	{
+	this.onSessionEnd = function() {
 		this.listeners.forEach(function(control) { control.onSessionEnd() });	
 		this.isInHandpointSession = false;
 	}
 	
-	// TODO: "FocusedControl" stuff
-	// TODO: pass the TrackedUser and ControlList in every event
+	this.SetFocusedControl = function(control) {
+		if (control == this.focusedControl) return;
+		
+		this.RemoveControl(this.focusedControl);
+		this.focusedControl = control;
+		this.AddControl(control);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -401,9 +412,14 @@ function HandPointControl()
 }
 
 // Fader
-function Fader(size, orientation)
+function Fader(orientation, size)
 {
-	// var
+	// defaults
+	if (undefined === size) {
+		size = 250;
+	}
+
+	// vars
 	this.size = size;
 	this.orientation = orientation;
 	this.value = 0;
@@ -411,6 +427,7 @@ function Fader(size, orientation)
 	this.itemsCount = 1;
 	this.hysteresis = 0.1;
 	this.selectedItem = 0;
+	this.initialValue = 0.5;
 
 	// events
 	// TODO: make real events
@@ -420,18 +437,18 @@ function Fader(size, orientation)
 	// hand point control callbacks
 	this.onSessionStart = function(sessionStartPosition) {
 		this.center = sessionStartPosition;
-		this.selectedItem = Math.floor(this.itemsCount / 2);
+		this.value = this.initialValue;
+		this.selectedItem = Math.floor(this.itemsCount * this.value);
 		this.onItemSelected(this.selectedItem);
 	}
 
 	this.onSessionUpdate = function(hands) {
 		var position = hands[0].position;
 		var distanceFromCenter = position[this.orientation] - this.center[this.orientation];
-		var ret = distanceFromCenter / this.size + 0.5;
+		var ret = (distanceFromCenter / this.size) + 0.5;
 		this.value = 1 - this.clamp(ret, 0, 1);
 
 		var newSelected = this.selectedItem;
-		
 		var minValue = (this.selectedItem * (1 / this.itemsCount)) - this.hysteresis;
 		var maxValue = (this.selectedItem + 1) * (1 / this.itemsCount) + this.hysteresis;
 		if (this.value > maxValue) {
@@ -462,6 +479,173 @@ function Fader(size, orientation)
 		if (x > max) return max;
 		return x;
 	}
+}
+
+function PushDetector(size)
+{
+	this.isPushed = false;
+	this.pushProgress = 0;
+	this.pushTime = 0;
+
+	// events
+	this.onPush = function() {}
+	this.onRelease = function() {}
+	this.onClick = function() {}
+	
+	if (undefined === size) {
+		size = 150;
+	}
+		
+	this.fader = new Fader(OrientationZ, size);
+	this.fader.initialValue = 0.8; // TODO: initial value is reversed (1.0 - value) for some reason, i'll fix it later
+	
+	// callbacks
+	this.onSessionStart = function(focusPoint) {
+		this.fader.onSessionStart(focusPoint);
+	}
+	
+	this.onSessionUpdate = function(hands) {
+		var position = hands[0].position;
+		
+		// TODO: Move fader to contain current hand point
+		this.fader.onSessionUpdate(hands);
+		this.pushProgress = this.fader.value;
+		
+		if (!this.isPushed) {
+			if (1.0 == this.pushProgress) {
+				this.isPushed = true;
+				this.pushTime = (new Date()).getTime();
+				this.pushPosition = position;
+				this.onPush();
+			}
+		} else {
+			if (this.pushProgress < 0.5) {
+				this.isPushed = false;
+				if (this.isClick()) {
+					this.onClick();
+				}
+				this.onRelease();
+			}
+		}
+		
+		// TODO: drift if we aren't pushed
+	}
+	
+	this.onSessionEnd = function() {
+		this.fader.onSessionEnd();
+		if (this.isPushed) {
+			this.isPushed = false;
+			this.onRelease();
+		}
+	}
+	
+	this.onDoUpdate = function() {}
+	
+	// internal
+	
+	this.isClick = function() 
+	{
+		var delta = (new Date()).getTime() - this.pushTime;
+		return (delta < 1000);
+	} 
+}
+
+function SwipeDetector(orientation, size) 
+{
+	// vars
+	this.isSwiped = false;
+
+	// events
+	this.onSwipeMin = function() {};
+	this.onSwipeMax = function() {};
+		
+	this.fader = new Fader(orientation, size);
+	this.fader.initialValue = 0.5;
+	
+	// callbacks
+	this.onSessionStart = function(focusPoint) {
+		this.fader.onSessionStart(focusPoint);
+	}
+	
+	this.onSessionUpdate = function(hands) {
+		var position = hands[0].position;
+		
+		// TODO: Move fader to contain current hand point
+		this.fader.onSessionUpdate(hands);
+		
+		if (!this.isSwiped) {
+			if (1 == this.fader.value || 0 == this.fader.value) {
+				this.isSwiped = true;
+				this.swipeValue = this.fader.value;
+				if (1 == this.fader.value) {
+					this.onSwipeMax();
+				} else {
+					this.onSwipeMin();
+				}
+			}
+		} else {
+			if (Math.abs(this.fader.value - this.swipeValue) >= 0.3) {
+				this.onSwipeRelease();
+				this.isSwiped = false;
+			}
+		}
+		
+		// TODO: drift if we aren't pushed
+	}
+	
+	this.onSessionEnd = function() {
+		this.fader.onSessionEnd();
+		if (this.isSwiped) {
+			this.isSwiped = false;
+			this.onSwipeRelease();
+		}
+	}
+	
+	this.onDoUpdate = function() {}
+}
+
+function HorizontalSwipeDetector(size)
+{
+	if (undefined === size) {
+		size = 350;
+	}
+	
+	this.onSwipeLeft = function() {}
+	this.onSwipeRight = function() {}
+	this.onSwipeRelease = function() {}
+	
+	var me = this;
+	this.sd = new SwipeDetector(OrientationX, size);
+	this.sd.onSwipeMin = function() { me.onSwipeLeft(); }
+	this.sd.onSwipeMax = function() { me.onSwipeRight(); }
+	this.sd.onSwipeRelease = function() { me.onSwipeRelease(); }
+	
+	this.onSessionStart = function(focusPoint) { this.sd.onSessionStart(focusPoint); }
+	this.onSessionEnd = function() { this.sd.onSessionEnd(); }
+	this.onSessionUpdate = function(hands) { this.sd.onSessionUpdate(hands); }
+	this.onDoUpdate = function(user) { this.sd.onDoUpdate(user); }
+}
+
+function VerticalSwipeDetector(size)
+{
+	if (undefined === size) {
+		size = 250;
+	}
+	
+	this.onSwipeUp = function() {}
+	this.onSwipeDown = function() {}
+	this.onSwipeRelease = function() {}
+
+	var me = this;
+	this.sd = new SwipeDetector(OrientationY, size);
+	this.sd.onSwipeMin = function() { me.onSwipeUp(); }
+	this.sd.onSwipeMax = function() { me.onSwipeDown(); }
+	this.sd.onSwipeRelease = function() { me.onSwipeRelease(); }
+	
+	this.onSessionStart = function(focusPoint) { this.sd.onSessionStart(focusPoint); }
+	this.onSessionEnd = function() { this.sd.onSessionEnd(); }
+	this.onSessionUpdate = function(hands) { this.sd.onSessionUpdate(hands); }
+	this.onDoUpdate = function(user) { this.sd.onDoUpdate(user); }
 }
 
 //-----------------------------------------------------------------------------
@@ -649,8 +833,11 @@ Zig.listeners.push(Zig.SingleUser);
 //Zig.listeners.push(Zig.SideBySide);
 
 Zig.Fader = Fader;
+Zig.PushDetector = PushDetector;
+Zig.VerticalSwipeDetector = VerticalSwipeDetector;
+Zig.HorizontalSwipeDetector = HorizontalSwipeDetector;
 
-Zig.OrientationX = 0;
-Zig.OrientationY = 1;
-Zig.OrientationZ = 2;
+Zig.OrientationX = OrientationX;
+Zig.OrientationY = OrientationY;
+Zig.OrientationZ = OrientationZ;
 Zig.verbose = true;

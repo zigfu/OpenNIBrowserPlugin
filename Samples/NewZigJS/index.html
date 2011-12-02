@@ -31,8 +31,24 @@ function ZigPluginLoaded()
 	Zig.init($("ZigPlugin"));
 	console.log("ZigJS initialized");
 	
-	hpc = new MySimpleHandPointControl();
-	//Zig.SingleUser.controls.AddControl(hpc);
+	pd = new PushDetector();
+	pd.onPush = function() { console.log("PushDetector: push"); }
+	pd.onRelease = function() { console.log("PushDetector: release"); }
+	pd.onClick = function() { console.log("PushDetector: click"); }
+
+	hsd = new HorizontalSwipeDetector();
+	hsd.onSwipeLeft = function() { console.log("HorizontalSwipeDetector: left") };
+	hsd.onSwipeRight = function() { console.log("HorizontalSwipeDetector: right") };
+	hsd.onSwipeRelease = function() { console.log("HorizontalSwipeDetector: release") };
+	
+	vsd = new VerticalSwipeDetector();
+	vsd.onSwipeUp = function() { console.log("VerticalSwipeDetector: up") };
+	vsd.onSwipeDown = function() { console.log("VerticalSwipeDetector: down") };
+	vsd.onSwipeRelease = function() { console.log("VerticalSwipeDetector: release") };
+
+	Zig.SingleUser.controls.AddControl(pd);
+	Zig.SingleUser.controls.AddControl(hsd);
+	Zig.SingleUser.controls.AddControl(vsd);
 }
 
 </script>

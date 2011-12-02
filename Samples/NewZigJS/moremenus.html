@@ -8,6 +8,9 @@
 	<link rel="stylesheet" href="css/anythingslider.css">
 	<script src="js/jquery.anythingslider.js"></script>
 
+	<!-- swfobject -->
+	<script src="js/swfobject.js" type="text/javascript"></script> 
+	
 	<!-- ZigJS -->
 	<script type="text/javascript" src="zig.js"></script>
 	
@@ -25,6 +28,8 @@
 	</style>
 
 	<script>
+		currentMenu = [];
+	
 		$(function(){
 			$('#myslider').anythingSlider({
 				resizeContents      : false,
@@ -32,11 +37,13 @@
 				buildStartStop		: false,
 			});
 			
-			add(["Home", "Something", "Very", "Cool"]);
+			addMenu(menuItems);
+			currentMenu = menuItems;
+			loadPlayer("videoDiv", 700, 450);
 		});
 		
 		function addToAnythingslider(toAdd) {
-			$("#myslider").append("<li>" + toAdd + "</li>");
+			$("#myslider").append($("<li>").append(toAdd));
 			$("#myslider").data('AnythingSlider').updateSlider();
 		}
 		
@@ -44,24 +51,25 @@
 			$("#myslider li:not(.cloned)").last().remove();
 			$("#myslider").data('AnythingSlider').updateSlider();
 		}
-		
-		function add(items) {
-			var newMenu = makeMenu(items);
-			addToAnythingslider(newMenu);
-		}
-		
-		function remove() {
-			
+
+		function removeLastItem() {
+			console.log("inside remove last item");
 			$("#myslider li.panel:not(.cloned)").last().remove();
 			$("#myslider").data('AnythingSlider').updateSlider();
 		}
-
+		
 		function makeMenu(items) {
-			var res = "";
+			var res = $("<ul class='menu'>");
 			for (i in items) {
-				res += "<li><a href='#' class='menuitem'><span>" + items[i] + "</span></a></li>";
+				var curr = $("<a href='#' class='menuitem'><span>" + items[i].text + "</span></a>").click(items[i].action);
+				res.append($("<li>").append(curr));
 			}
-			return "<ul class='menu'>" + res + "</ul>";
+			return res;
+		}
+
+		function addMenu(items) {
+			var newMenu = makeMenu(items);
+			addToAnythingslider(newMenu);
 		}
 		
 		function getActivePanel() {
@@ -72,52 +80,189 @@
 			return res;
 		}
 		
+		function isActivePanelTheMovie()
+		{
+			return $("#myslider #playerGoesHere.activePage").length > 0;
+		}
+		
+		function isActivePanelHome() 
+		{
+			// currentPage starts at 1
+			return $("#myslider").data('AnythingSlider').currentPage == 1;
+		}
+		
 		function getActiveMenuItems() {
 			return $(getActivePanel()).find("li a.menuitem");
 		}
 		
 		function menuChanged(slider) 
 		{
-			f.itemsCount = getActiveMenuItems().length;
-			console.log("Menu changed. New menu item count : " + f.itemsCount);
+			if (!isActivePanelTheMovie()) {
+				verticalFader.itemsCount = getActiveMenuItems().length;
+			}
+		}
+		
+		function movieLoaded(slider)
+		{
+			// ?
 		}
 		
 		function backDone(slider)
 		{
+			console.log("back done");
 			menuChanged(slider);
-			remove();
+			$("#ytPlayer").appendTo($("#videoDiv"));
+			if ($("#myslider").data('AnythingSlider').pages > 1) {
+				removeLastItem();
+			}
 		}
 		
-		function navigateTo(items) {
-			if (items === undefined) {
-				items = ["Test1", "Test2", "Test3", "Test4", "Test5"];
-			}
-			add(items);
+		function navigateToMenu(items) {
+			addMenu(items);
+			$(getActiveMenuItems()).removeClass("highlighted");
 			$("#myslider").data('AnythingSlider').goForward(false, menuChanged);
+			currentMenu = items;
+		}
+		
+		function navigateToMovie() {
+			$(getActiveMenuItems()).removeClass("highlighted");
+			$("#myslider").append("<li id='playerGoesHere'></li>");
+			$("#ytPlayer").appendTo($("#playerGoesHere"));
+			$("#myslider").data('AnythingSlider').updateSlider();
+			$("#myslider").data('AnythingSlider').goForward(false, movieLoaded);
 		}
 		
 		function navigateBack() {
 			$("#myslider").data('AnythingSlider').goBack(false, backDone);
 		}
-				
-		function ZigPluginLoaded() {
-			Zig.init(document.getElementById("ZigPlugin"));
 		
-			// fader to control the menu
-			f = new Zig.Fader(250, Zig.OrientationY);
-			f.itemsCount = getActiveMenuItems().length;
-			Zig.SingleUser.controls.AddControl(f);
-			f.onItemSelected = function(item) {
-				console.log("ItemSelected: " + item);
-				$(getActiveMenuItems()).eq(item).addClass("highlighted");
-			};
-			
-			f.onItemUnselected = function(item) {
-				console.log("ItemUnselected: " + item);
-				$(getActiveMenuItems()).eq(item).removeClass("highlighted");
-			};
+		function loadPlayer(divid, width, height) {
+			var so = new SWFObject("http://www.youtube.com/apiplayer?&enablejsapi=1&playerapiid=player1", "ytPlayer", width, height, '9.0', '#000000');
+			so.addParam("allowscriptaccess", "always");
+			so.write(divid);
 		}
 		
+		function ZigPluginLoaded() {
+			Zig.init(document.getElementById("ZigPlugin"));
+			verticalFader.itemsCount = getActiveMenuItems().length;
+			Zig.SingleUser.controls.AddControl(verticalFader);
+			Zig.SingleUser.controls.AddControl(swipeDetector);
+			Zig.SingleUser.controls.AddControl(pushDetector);
+		}
+		
+		verticalFader = new Zig.Fader(Zig.OrientationY, 250);
+		verticalFader.onItemSelected = function(item) {
+			$(getActiveMenuItems()).eq(item).addClass("highlighted");
+		};
+		
+		verticalFader.onItemUnselected = function(item) {
+			$(getActiveMenuItems()).eq(item).removeClass("highlighted");
+		};
+
+		swipeDetector = new Zig.HorizontalSwipeDetector();
+		swipeDetector.onSwipeLeft = function() {
+			$(getActiveMenuItems()).removeClass("highlighted");
+			navigateBack();
+		};
+		swipeDetector.onSwipeRight = function() {
+			if (!isActivePanelTheMovie()) {
+				$(getActiveMenuItems()).eq(verticalFader.selectedItem).click();
+			}
+		}
+		
+		pushDetector = new Zig.PushDetector();
+		pushDetector.onClick = function() {
+			console.log("Clicked");
+		}
+		
+		menuItems = 
+		[
+			{
+				text 	: "First",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					}
+				])} 
+			},
+			{
+				text 	: "Second",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					}
+				])} 
+			},	
+			{
+				text 	: "Third",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					}
+				])} 
+			},		
+			{
+				text 	: "Fourth",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					}
+				])} 
+			}
+		];
+				
 	</script> 
 </head>
 
@@ -126,14 +271,14 @@
 <ul id="myslider">
 </ul>
 
-<br><br>
-<input type="button" value="Add" onclick="navigateTo()" />
-<input type="button" value="Remove" onclick="navigateBack()" />
-
 <div id="pluginContainer">
 	<object id="ZigPlugin" type="application/x-zig" width="0" height="0">
 		<param name="onload" value="ZigPluginLoaded" />
 	</object>
+</div>
+
+<div id="playerContainer" style="display:none">
+	<div id="videoDiv">Loading...</div>
 </div>
 
 </body>

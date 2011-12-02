@@ -1,0 +1,358 @@
+<html>
+<head>
+		
+	<!-- jquery -->
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js"></script>
+	<script>window.jQuery || document.write('<script src="js/jquery.min.js"><\/script>')</script>
+
+	<!-- anything slider -->
+	<link rel="stylesheet" href="css/anythingslider.css" />
+	<link href='filebrowser.css' rel='stylesheet' type='text/css' />
+	<script src="js/jquery.anythingslider.js"></script>
+
+	<!-- swfobject -->
+	<script src="js/swfobject.js" type="text/javascript"></script> 
+	
+	<!-- ZigJS -->
+	<script type="text/javascript" src="zig.js"></script>
+	
+	<style>
+	#myslider { width: 500px; height: 350px; }
+	
+	
+	.menu{
+		margin:0; 
+		padding:0; 
+		width:450px; 
+		list-style:none;
+		background:rgb();
+	}
+	.menu li {
+		padding:2; 
+		margin:0 0 1px 0; 
+		height:40px; 
+		display:block; 
+	}
+	.menu li a {
+		text-align:left;
+		height:40px; 
+		line-height: 40px;
+		padding:0px 25px; 
+		font:16px Verdana, Arial, Helvetica, sans-serif; 
+		color:rgb(); 
+		display:block; 
+		/*
+		background:url('images/verMenuImages.png') 0px 0px no-repeat; 
+		*/
+		text-decoration:none;
+		margin: auto;
+	}
+	.menu li a:hover {
+		/*
+		background:url('images/verMenuImages.png') 0px -40px no-repeat; 
+		*/
+		color:rgb();
+	}
+	.menu li a.highlighted {
+		/*
+		background:url('images/verMenuImages.png') 0px -40px no-repeat; 
+		*/
+		color:rgb();
+	}
+	.menu li a.active, .menu li a.active:hover {
+		/*
+		background:url('images/verMenuImages.png') 0px -80px no-repeat; 
+		*/
+		color:rgb();
+	}
+	.menu li a span {
+		line-height:40px;
+	}
+	</style>
+
+	<script>
+		currentMenu = [];
+	
+		$(function(){
+			$('#myslider').anythingSlider({
+				resizeContents      : true,
+				autoPlay			: false,
+				buildStartStop		: false
+			});
+			
+			addMenu(menuItems);
+			currentMenu = menuItems;
+			loadPlayer("videoDiv", 700, 450);
+		});
+		
+		function addToAnythingslider(toAdd) {
+			$("#myslider").append($("<li>").append(toAdd));
+			$("#myslider").data('AnythingSlider').updateSlider();
+		}
+		
+		function removeLastItemInAnythingSlider() {
+			$("#myslider li:not(.cloned)").last().remove();
+			$("#myslider").data('AnythingSlider').updateSlider();
+		}
+
+		function removeLastItem() {
+			console.log("inside remove last item");
+			$("#myslider li.panel:not(.cloned)").last().remove();
+			$("#myslider").data('AnythingSlider').updateSlider();
+		}
+		
+		function makeMenu(items) {
+			var res = $("<ul class='menu'>");
+			for (i in items) {
+				var curr = $("<a href='#' class='menuitem'><span>" + items[i].text + "</span></a>").click(items[i].action);
+				res.append($("<li>").append(curr));
+			}
+			return res;
+		}
+
+		function addMenu(items) {
+			var newMenu = makeMenu(items);
+			addToAnythingslider(newMenu);
+		}
+		
+		function getActivePanel() {
+			var res = $("#myslider li.activePage");
+			if (res.length == 0) {
+				res = $("#myslider li.panel");
+			}
+			return res;
+		}
+		
+		function isActivePanelTheMovie()
+		{
+			return $("#myslider #playerGoesHere.activePage").length > 0;
+		}
+		
+		function isActivePanelHome() 
+		{
+			// currentPage starts at 1
+			return $("#myslider").data('AnythingSlider').currentPage == 1;
+		}
+		
+		function getActiveMenuItems() {
+			return $(getActivePanel()).find("li a.menuitem");
+		}
+		
+		function menuChanged(slider) 
+		{
+			if (!isActivePanelTheMovie()) {
+				verticalFader.itemsCount = getActiveMenuItems().length;
+			}
+		}
+		
+		function movieLoaded(slider)
+		{
+			// ?
+		}
+		
+		function backDone(slider)
+		{
+			console.log("back done");
+			menuChanged(slider);
+			$("#ytPlayer").appendTo($("#videoDiv"));
+			if ($("#myslider").data('AnythingSlider').pages > 1) {
+				removeLastItem();
+			}
+		}
+		
+		function navigateToMenu(items) {
+			addMenu(items);
+			$(getActiveMenuItems()).parent().removeClass("highlighted");
+			$("#myslider").data('AnythingSlider').goForward(false, menuChanged);
+			currentMenu = items;
+		}
+		
+		function navigateToMovie() {
+			$(getActiveMenuItems()).parent().removeClass("highlighted");
+			$("#myslider").append("<li id='playerGoesHere'></li>");
+			$("#ytPlayer").appendTo($("#playerGoesHere"));
+			$("#myslider").data('AnythingSlider').updateSlider();
+			$("#myslider").data('AnythingSlider').goForward(false, movieLoaded);
+		}
+		
+		function navigateBack() {
+			$("#myslider").data('AnythingSlider').goBack(false, backDone);
+		}
+		
+		function loadPlayer(divid, width, height) {
+			var so = new SWFObject("http://www.youtube.com/apiplayer?&enablejsapi=1&playerapiid=player1", "ytPlayer", width, height, '9.0', '#000000');
+			so.addParam("allowscriptaccess", "always");
+			so.write(divid);
+		}
+		
+		function ZigPluginLoaded() {
+			Zig.init(document.getElementById("ZigPlugin"));
+			verticalFader.itemsCount = getActiveMenuItems().length;
+			Zig.SingleUser.controls.AddControl(verticalFader);
+			Zig.SingleUser.controls.AddControl(swipeDetector);
+			Zig.SingleUser.controls.AddControl(pushDetector);
+		}
+		
+		verticalFader = new Zig.Fader(Zig.OrientationY, 250);
+		verticalFader.onItemSelected = function(item) {
+			$(getActiveMenuItems()).eq(item).parent().addClass("highlighted");
+		};
+		
+		verticalFader.onItemUnselected = function(item) {
+			$(getActiveMenuItems()).eq(item).parent().removeClass("highlighted");
+		};
+
+		swipeDetector = new Zig.HorizontalSwipeDetector();
+		swipeDetector.onSwipeLeft = function() {
+			$(getActiveMenuItems()).parent().removeClass("highlighted");
+			navigateBack();
+		};
+		swipeDetector.onSwipeRight = function() {
+			if (!isActivePanelTheMovie()) {
+				$(getActiveMenuItems()).eq(verticalFader.selectedItem).click();
+			}
+		}
+		
+		pushDetector = new Zig.PushDetector();
+		pushDetector.onClick = function() {
+			console.log("Clicked");
+		}
+		
+		menuItems = 
+		[
+			{
+				text 	: "First",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "First test1",
+						action 	: function() {}
+					}
+				])} 
+			},
+			{
+				text 	: "Second",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Second test1",
+						action 	: function() {}
+					}
+				])} 
+			},	
+			{
+				text 	: "Third",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Third test1",
+						action 	: function() {}
+					}
+				])} 
+			},	
+			{
+				text 	: "Fourth",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fourth test1",
+						action 	: function() {}
+					}
+				])} 
+			},		
+			{
+				text 	: "Fifth",
+				action	: function() { navigateToMenu([
+					{ 
+						text 	: "Fifth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fifth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fifth test1",
+						action 	: function() {}
+					},
+					{ 
+						text 	: "Fifth test1",
+						action 	: function() {}
+					}
+				])} 
+			}
+		];
+				
+	</script> 
+</head>
+
+<body>
+
+<div id='wrapper'>
+	<div id='logocontainer'>
+		<img id='logo' src='logo.png' alt='' />
+	</div>
+	<div id='menucontainer'>
+		<div id='menu'>
+			<ul id="myslider">
+			</ul>
+		</div>
+	</div>
+</div>
+
+<div id="pluginContainer">
+	<object id="ZigPlugin" type="application/x-zig" width="0" height="0">
+		<param name="onload" value="ZigPluginLoaded" />
+	</object>
+</div>
+
+<div id="playerContainer" style="display:none">
+	<div id="videoDiv">Loading...</div>
+</div>
+
+</body>
+</html>

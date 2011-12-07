@@ -269,7 +269,7 @@ thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 			if (s_listeners.empty()) {
 				continue;
 			}
-			FB::variant imageData = *bitmap_from_depth(depthMD, sceneMD); // do this only if we have work to do
+			FB::variant imageData = *bitmap_from_depth(depthMD, sceneMD); // TODO: do this only if we have work to do
 			for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 				ZigJSAPIPtr realPtr = i->lock();
 				if (realPtr) {
@@ -280,7 +280,7 @@ thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 						}
 						realPtr->setUsers(jsUsers);
 						realPtr->setHands(jsHands);
-						realPtr->fire_NewFrame();
+						realPtr->fire_NewFrame(jsUsers, jsHands);
 						++i;
 					} catch(FB::script_error) {
 						i = s_listeners.erase(i); // remove from listeners list - it means the tab has probably unloaded already

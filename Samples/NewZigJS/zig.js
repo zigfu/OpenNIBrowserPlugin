@@ -105,12 +105,14 @@ function ZigTrackedUser(userid)
 	this.skeleton = [];
 	this.hands = [];
 	this.userid = userid;
+	this.position = [];
 	this.centerofmass = [];
 	this.isInHandpointSession = false;
 	
 	this.UpdateFullbody = function(centerofmass, skeleton)
 	{
 		this.centerofmass = centerofmass;
+		this.position = centerofmass;
 		this.skeleton = skeleton;
 	}
 	
@@ -182,9 +184,9 @@ function ZigUserTracker()
 		this.listeners.forEach(function(listener) { listener.onLostUser(trackedUser) });
 	}
 	
-	this.onUpdate = function()
+	this.onUpdate = function(userTracker)
 	{
-		this.listeners.forEach(function(listener) { listener.onUpdate() });
+		this.listeners.forEach(function(listener) { listener.onUpdate(userTracker) });
 	}
 	
 	this.init = function(plugin) 
@@ -328,7 +330,8 @@ function ZigUserTracker()
 		this.UpdateUsers(users);
 		this.UpdateHands(hands);
 		this.trackedUsers.forEach(function(trackedUser) { trackedUser.NotifyListeners(); });
-		this.listeners.forEach(function(listener) { listener.onUpdate(); });
+		var userTracker = this;
+		this.listeners.forEach(function(listener) { listener.onUpdate(userTracker); });
 	}
 	
 	// does this user actually exist in the acquisition layer?
@@ -648,6 +651,44 @@ function VerticalSwipeDetector(size)
 	this.onDoUpdate = function(user) { this.sd.onDoUpdate(user); }
 }
 
+function ZigTopDownUsersRadar(parentElement, userClass)
+{
+	this.parentElement = parentElement;
+	this.users = [];
+	
+	this.onNewUser = function(user) {
+		var el = document.createElement('div');
+		el.classList.add(userClass);
+		this.users[user.userid] = el;
+		this.parentElement.appendChild(el);
+	}
+	
+	this.onLostUser = function(user) {
+		this.parentElement.removeChild(this.users[user.userid]);
+		delete this.users[user];
+	}
+	
+	this.DoUserEngaged = function(user) {
+		this.users[user.userid].classList.add('active');
+	}
+	
+	this.DoUserDisengaged = function(user) {
+		this.users[user.userid].classList.remove('active');
+	}
+	
+	this.onUpdate = function(userTracker) 
+	{
+		for (var userIndex in userTracker.trackedUsers) {
+			var currUser = userTracker.trackedUsers[userIndex];
+			var el = this.users[currUser.userid];
+			var pos = currUser.position;
+			
+			el.style.left = ((1 - ((pos[0] / 4000) + 0.5)) * this.parentElement.offsetWidth - (el.offsetWidth / 2)) + "px";
+			el.style.top = ((pos[2] / 4000.0) * this.parentElement.offsetHeight - (el.offsetHeight / 2)) + "px";
+		}		
+	}
+}
+
 //-----------------------------------------------------------------------------
 // "Engagement" managers
 //-----------------------------------------------------------------------------
@@ -765,7 +806,7 @@ function ZigEngageSideBySide(usertracker, leftuserid, rightuserid)
 function ZigEngageSingleSession(usertracker, userid)
 {
 	this.controls = new ZigControlList();
-
+	
 	// the session manager can be inited with a valid userid
 	// (for persisting state between pages, etc.)
 	if (undefined === userid) {
@@ -776,6 +817,10 @@ function ZigEngageSingleSession(usertracker, userid)
 	
 	this.usertracker = usertracker;
 	this.userid = userid;
+
+	// public events
+	this.onUserEngaged = function(user) {}
+	this.onUserDisengaged = function(user) {}
 	
 	this.onNewUser = function(trackeduser) {
 		// create a hand point control to do our "work" for us
@@ -785,7 +830,9 @@ function ZigEngageSingleSession(usertracker, userid)
 				if (parent.userid == 0) {
 					// now we do
 					parent.userid = user.userid;
+					user.engaged = true;
 					user.controls.AddControl(parent.controls);
+					parent.onUserEngaged(user);
 				}
 			}
 			this.onSessionEnd = function() {
@@ -793,7 +840,9 @@ function ZigEngageSingleSession(usertracker, userid)
 				if (parent.userid == user.userid) {
 					// not anymore
 					parent.userid = 0;
+					user.engaged = false;
 					user.controls.RemoveControl(parent.controls);
+					parent.onUserDisengaged(user);
 				}
 			}
 			this.onSessionUpdate = function() {}
@@ -832,11 +881,14 @@ Zig.SideBySide = new ZigEngageSideBySide(Zig);
 Zig.listeners.push(Zig.SingleUser);
 //Zig.listeners.push(Zig.SideBySide);
 
+// controls
 Zig.Fader = Fader;
 Zig.PushDetector = PushDetector;
 Zig.VerticalSwipeDetector = VerticalSwipeDetector;
 Zig.HorizontalSwipeDetector = HorizontalSwipeDetector;
+Zig.TopDownUsersRadar = ZigTopDownUsersRadar;
 
+// consts
 Zig.OrientationX = OrientationX;
 Zig.OrientationY = OrientationY;
 Zig.OrientationZ = OrientationZ;

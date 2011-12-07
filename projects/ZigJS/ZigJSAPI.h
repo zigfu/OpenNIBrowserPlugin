@@ -36,7 +36,7 @@ public:
 	FB_JSAPI_EVENT(UserTrackingStarted, 1, (int));
 	FB_JSAPI_EVENT(UserTrackingStopped, 1, (int));
 
-	FB_JSAPI_EVENT(NewFrame, 0,());
+	FB_JSAPI_EVENT(NewFrame, 2,(const FB::variant&, const FB::variant&));
 
 	void onHandCreate(int handId, float x, float y, float z, float time);
 	void onHandUpdate(int handId, float x, float y, float z, float time);

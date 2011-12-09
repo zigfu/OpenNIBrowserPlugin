@@ -26,8 +26,9 @@
 
 ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host)
 {
-	// implicit "users" attribute
+	firingEvents = true;
 	registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
+    registerProperty("firingEvents",  make_property(this, &ZigJSAPI::get_firingEvents, &ZigJSAPI::set_firingEvents));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -101,6 +102,23 @@ void ZigJSAPI::onUserTrackingStarted(int userId)
 void ZigJSAPI::onUserTrackingStopped(int userId)
 {
 	fire_UserTrackingStopped(userId);
+}
+
+bool ZigJSAPI::get_firingEvents()
+{
+	return firingEvents;
+}
+
+void ZigJSAPI::set_firingEvents(bool firingEvents)
+{
+	this->firingEvents = firingEvents;
+}
+
+void ZigJSAPI::onNewFrame()
+{
+	if (firingEvents) {
+		fire_NewFrame();
+	}
 }
 
 //TODO: unhack

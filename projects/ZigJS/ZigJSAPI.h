@@ -36,7 +36,8 @@ public:
 	FB_JSAPI_EVENT(UserTrackingStarted, 1, (int));
 	FB_JSAPI_EVENT(UserTrackingStopped, 1, (int));
 
-	FB_JSAPI_EVENT(NewFrame, 2,(const FB::variant&, const FB::variant&));
+	//FB_JSAPI_EVENT(NewFrame, 2,(const FB::variant&, const FB::variant&));
+	FB_JSAPI_EVENT(NewFrame, 0);
 
 	void onHandCreate(int handId, float x, float y, float z, float time);
 	void onHandUpdate(int handId, float x, float y, float z, float time);
@@ -49,9 +50,16 @@ public:
 	void onUserLeft(int userId);
 	void onUserTrackingStarted(int userId);
 	void onUserTrackingStopped(int userId);
+
+	void onNewFrame();
+
 private:
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
+
+	bool get_firingEvents();
+	void set_firingEvents(const bool firingEvents);
+	bool firingEvents;
 
 	//TODO: unhack
 public:

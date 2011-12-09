@@ -280,7 +280,8 @@ thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
 						}
 						realPtr->setUsers(jsUsers);
 						realPtr->setHands(jsHands);
-						realPtr->fire_NewFrame(jsUsers, jsHands);
+						realPtr->onNewFrame();
+						//realPtr->fire_NewFrame(jsUsers, jsHands);
 						++i;
 					} catch(FB::script_error) {
 						i = s_listeners.erase(i); // remove from listeners list - it means the tab has probably unloaded already
@@ -311,7 +312,7 @@ void XN_CALLBACK_TYPE ZigJS::GestureRecognizedHandler(xn::GestureGenerator& gene
 void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
 	s_handpoints.push_back(HandPoint(user, WhichUserDoesThisPointBelongTo(*pPosition), *pPosition));
-
+	/*
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -324,7 +325,7 @@ void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, Xn
 				s_listeners.erase(i++);
 			}
 		}
-	}
+	}*/
 }
 
 void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
@@ -339,7 +340,7 @@ void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, Xn
 			break;
 		}
 	}
-
+	/*
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -352,7 +353,7 @@ void XN_CALLBACK_TYPE ZigJS::HandUpdateHandler(xn::HandsGenerator& generator, Xn
 				s_listeners.erase(i++);
 			}
 		}
-	}
+	}*/
 }
 
 void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
@@ -364,7 +365,7 @@ void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, X
 			break;
 		}
 	}
-
+	/*
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -377,13 +378,19 @@ void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, X
 				s_listeners.erase(i++);
 			}
 		}
-	}
+	}*/
 }
 
 void XN_CALLBACK_TYPE ZigJS::OnNewUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie)
 {
-	generator.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
+	if (generator.GetSkeletonCap().NeedPoseForCalibration()) {
+		//std::string
+		generator.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
+	} else {
+		generator.GetSkeletonCap().StartTracking(nUserId);
+	}
 
+	/*
 	// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -396,11 +403,12 @@ void XN_CALLBACK_TYPE ZigJS::OnNewUser(xn::UserGenerator& generator, const XnUse
 				s_listeners.erase(i++);
 			}
 		}
-	}
+	}*/
 }
 
 void XN_CALLBACK_TYPE ZigJS::OnLostUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie)
 {	
+	/*
 		// send to listeners
 	{
 		boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -413,7 +421,7 @@ void XN_CALLBACK_TYPE ZigJS::OnLostUser(xn::UserGenerator& generator, const XnUs
 				s_listeners.erase(i++);
 			}
 		}
-	}
+	}*/
 
 }
 
@@ -436,7 +444,7 @@ void XN_CALLBACK_TYPE ZigJS::OnCalibrationEnd(xn::SkeletonCapability& skeleton, 
 	if (bSuccess) {
 		// start tracking
 		skeleton.StartTracking(nUserId);
-		
+		/*
 		// send to listeners
 		{
 			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -449,7 +457,7 @@ void XN_CALLBACK_TYPE ZigJS::OnCalibrationEnd(xn::SkeletonCapability& skeleton, 
 					s_listeners.erase(i++);
 				}
 			}
-		}
+		}*/
 
 		
 	} else {
@@ -519,6 +527,9 @@ void ZigJS::StaticInitialize()
 	} else {
 		FBLOG_INFO("xnInit", "ok get hands");
 	}
+
+	// make sure global mirror is on
+	s_context.SetGlobalMirror(true);
 
 	XnCallbackHandle ignore;
 

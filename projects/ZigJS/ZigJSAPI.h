@@ -14,6 +14,16 @@
 #include "BrowserHost.h"
 #include "ZigJS.h"
 
+#ifdef _WIN32
+// windows threads expect DWORD return value
+typedef unsigned long thread_ret_t;
+#else
+// pthreads expects void* return value
+typedef void *thread_ret_t;
+#endif
+
+const std::string VERSION = "0.9";
+
 class ZigJSAPI : public FB::JSAPIAuto
 {
 public:
@@ -36,8 +46,8 @@ public:
 	FB_JSAPI_EVENT(UserTrackingStarted, 1, (int));
 	FB_JSAPI_EVENT(UserTrackingStopped, 1, (int));
 
-	//FB_JSAPI_EVENT(NewFrame, 2,(const FB::variant&, const FB::variant&));
-	FB_JSAPI_EVENT(NewFrame, 0);
+	FB_JSAPI_EVENT(NewFrame, 2,(const FB::variant&, const FB::variant&));
+	//FB_JSAPI_EVENT(NewFrame, 0, ());
 
 	void onHandCreate(int handId, float x, float y, float z, float time);
 	void onHandUpdate(int handId, float x, float y, float z, float time);
@@ -51,7 +61,7 @@ public:
 	void onUserTrackingStarted(int userId);
 	void onUserTrackingStopped(int userId);
 
-	void onNewFrame();
+	void onNewFrame(const FB::variant& users, const FB::variant& hands);
 
 private:
 	ZigJSWeakPtr m_plugin;
@@ -60,6 +70,10 @@ private:
 	bool get_firingEvents();
 	void set_firingEvents(const bool firingEvents);
 	bool firingEvents;
+
+	void update();
+
+	static thread_ret_t XN_CALLBACK_TYPE timerThread(void * param);
 
 	//TODO: unhack
 public:

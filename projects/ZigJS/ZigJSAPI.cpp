@@ -29,6 +29,18 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	firingEvents = true;
 	registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
     registerProperty("firingEvents",  make_property(this, &ZigJSAPI::get_firingEvents, &ZigJSAPI::set_firingEvents));
+	registerMethod("update", make_method(this, &ZigJSAPI::update));
+	registerAttribute("version", VERSION, true); 
+
+	XN_THREAD_HANDLE handle;
+	XnStatus nRetVal = xnOSCreateThread((XN_THREAD_PROC_PROTO)timerThread, this, &handle);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail start thread");
+		return;
+	} else {
+		FBLOG_DEBUG("xnInit", "ok start thread");
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,12 +126,31 @@ void ZigJSAPI::set_firingEvents(bool firingEvents)
 	this->firingEvents = firingEvents;
 }
 
-void ZigJSAPI::onNewFrame()
+void ZigJSAPI::onNewFrame(const FB::variant& users, const FB::variant& hands)
 {
 	if (firingEvents) {
-		fire_NewFrame();
+		fire_NewFrame(users, hands);
 	}
 }
+
+void ZigJSAPI::update() 
+{
+	getPlugin()->ReadFrame();
+}
+
+thread_ret_t XN_CALLBACK_TYPE ZigJSAPI::timerThread(void * param)
+{
+	ZigJSAPI * instanceRaw = (ZigJSAPI *)param;
+	//TODO: should be changed to boost::dynamic_pointer_cast<shudder>() (or maybe chunder)
+	ZigJSAPIWeakPtr instance = boost::dynamic_pointer_cast<ZigJSAPI>(instanceRaw->shared_from_this());
+	while (1) {
+		xnOSSleep(30); // TODO: something better
+		ZigJSAPIPtr realPtr = instance.lock();
+		if (!realPtr) return (thread_ret_t)NULL;
+		realPtr->m_host->ScheduleOnMainThread(realPtr, boost::bind(&ZigJSAPI::update, realPtr));
+	}
+}
+
 
 //TODO: unhack
 void ZigJSAPI::setImage(FB::JSAPIPtr img)

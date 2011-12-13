@@ -225,74 +225,61 @@ FB::VariantList ZigJS::MakeHandsList()
 
 	return jsHands;
 }
-#ifdef _WIN32
-// windows threads expect DWORD return value
-typedef unsigned long thread_ret_t;
-#else
-// pthreads expects void* return value
-typedef void *thread_ret_t;
-#endif
 
-thread_ret_t XN_CALLBACK_TYPE ZigJS::OpenNIThread(void * dont_care)
-//void * ZigJS::OpenNIThread(void * dont_care)
+void ZigJS::ReadFrame()
 {
-	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
-	s_gestures.AddGesture ("Click",  NULL); //no bounding box
+	if (s_quit) return;
 
-	XnStatus nRetVal = s_context.StartGeneratingAll();
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_INFO("xnInit", "fail start generating");
-		s_lastFrame = -1;
-		return (thread_ret_t)(-1);
-	} else {
-		FBLOG_INFO("xnInit", "ok start generating");
-	}
 	xn::DepthMetaData depthMD;
 	xn::SceneMetaData sceneMD;
-
-	while(!s_quit) {
-		s_context.WaitAndUpdateAll();
-		if (nRetVal != XN_STATUS_OK) {
-			FBLOG_INFO("xnInit", "fail wait & update");
-			break;
-		} 
-		s_depth.GetMetaData(depthMD);
-		s_users.GetUserPixels(0, sceneMD);
-		s_lastFrame = (int)depthMD.FrameID();
-
-		FB::VariantList jsUsers = MakeUsersList();
-		FB::VariantList jsHands = MakeHandsList();
-		
-		// send to listeners
-		{
-			boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
-			if (s_listeners.empty()) {
-				continue;
-			}
-			FB::variant imageData = *bitmap_from_depth(depthMD, sceneMD); // TODO: do this only if we have work to do
-			for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
-				ZigJSAPIPtr realPtr = i->lock();
-				if (realPtr) {
-					try {
-						FB::JSAPIPtr image = realPtr->getImage();
-						if (image) {
-								image->SetProperty("src", imageData);
-						}
-						realPtr->setUsers(jsUsers);
-						realPtr->setHands(jsHands);
-						realPtr->onNewFrame();
-						//realPtr->fire_NewFrame(jsUsers, jsHands);
-						++i;
-					} catch(FB::script_error) {
-						i = s_listeners.erase(i); // remove from listeners list - it means the tab has probably unloaded already
-					}
-
-				} else {
-					i = s_listeners.erase(i);
-				}
-			}
-		}
+	
+	XnStatus nRetVal = s_context.WaitNoneUpdateAll();
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_INFO("ReadFrame", "fail wait & update");
+		return;
 	}
+
+	s_depth.GetMetaData(depthMD);
+
+	if (s_lastFrame == (int)depthMD.FrameID()) return; // not a new frame, do nothing
+
+	s_lastFrame = (int)depthMD.FrameID();
+	s_users.GetUserPixels(0, sceneMD);
+
+	FB::VariantList jsUsers = MakeUsersList();
+	FB::VariantList jsHands = MakeHandsList();
+	FB::variant imageData; //= *bitmap_from_depth(depthMD, sceneMD);
+
+	// get active listeners listeners
+	if (s_listeners.empty()) {
+		return;
+	}
+
+	bool marshaledImage = false;
+	for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
+		ZigJSAPIPtr realPtr = i->lock();
+		if (realPtr) {
+			try {
+				FB::JSAPIPtr image = realPtr->getImage();
+				if (image) {
+					if (!marshaledImage) {
+						imageData = *bitmap_from_depth(depthMD, sceneMD);
+						marshaledImage = true;
+					}
+					image->SetProperty("src", imageData);
+				}
+				//realPtr->setUsers(jsUsers);
+				//realPtr->setHands(jsHands);
+				realPtr->onNewFrame(jsUsers, jsHands);
+			} catch(const FB::script_error&) {
+				// means the JSAPI is for a dead tab, most likely. 
+				i = s_listeners.erase(i);
+			}
+			++i;
+		} else {
+			i = s_listeners.erase(i);
+		}
+	} // end of for
 }
 
 XnUserID ZigJS::WhichUserDoesThisPointBelongTo(XnPoint3D point)
@@ -544,13 +531,16 @@ void ZigJS::StaticInitialize()
 	s_users.GetPoseDetectionCap().RegisterToPoseCallbacks(&ZigJS::OnPoseDetected, NULL, NULL, ignore);
 
 	s_quit = false;
-	nRetVal = xnOSCreateThread((XN_THREAD_PROC_PROTO)OpenNIThread, NULL, &s_threadHandle);
+
+	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
+	s_gestures.AddGesture ("Click",  NULL); //no bounding box
+
+	nRetVal = s_context.StartGeneratingAll();
 	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_DEBUG("xnInit", "fail start thread");
-		s_lastFrame = -7;
-		return;
+		FBLOG_INFO("xnInit", "fail start generating");
+		s_lastFrame = -1;
 	} else {
-		FBLOG_DEBUG("xnInit", "ok start thread");
+		FBLOG_INFO("xnInit", "ok start generating");
 	}
 }
 

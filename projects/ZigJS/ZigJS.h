@@ -19,6 +19,8 @@
 #include <XnLog.h>
 #include <XnCppWrapper.h>
 
+#include "json/json.h"
+
 class HandPoint
 {
 public:
@@ -62,6 +64,12 @@ private:
 	static FB::VariantList OrientationToVariant(XnMatrix3X3 ori);
 	static FB::VariantList MakeUsersList();
 	static FB::VariantList MakeHandsList();
+
+	static Json::Value GetJointsJsonList(XnUserID userid);
+	static Json::Value PositionToValue(XnPoint3D pos);
+	static Json::Value OrientationToValue(XnMatrix3X3 ori);
+	static Json::Value MakeUsersJsonList();
+	static Json::Value MakeHandsJsonList();
 
 	static XnUserID WhichUserDoesThisPointBelongTo(XnPoint3D point);
 

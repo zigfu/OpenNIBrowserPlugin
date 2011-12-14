@@ -10,6 +10,8 @@
 #include "ZigJSAPI.h"
 
 #include "ZigJS.h"
+#include "json/json.h"
+#include "fbjson.h"
 
 using namespace boost::assign;
 
@@ -226,6 +228,116 @@ FB::VariantList ZigJS::MakeHandsList()
 	return jsHands;
 }
 
+//////////JSON
+Json::Value ZigJS::PositionToValue(XnPoint3D pos)
+{
+	Json::Value xyz(Json::arrayValue);
+	xyz.resize(3);
+	xyz[0u] = pos.X;
+	xyz[1u] = pos.Y;
+	xyz[2u] = pos.Z;
+	return xyz;
+}
+
+Json::Value ZigJS::OrientationToValue(XnMatrix3X3 ori)
+{
+	Json::Value result(Json::arrayValue);
+	result.resize(9);
+	result[0u] = ori.elements[0];
+	result[1u] = ori.elements[3];
+	result[2u] = ori.elements[6];
+	result[3u] = ori.elements[1];
+	result[4u] = ori.elements[4];
+	result[5u] = ori.elements[7];
+	result[6u] = ori.elements[2];
+	result[7u] = ori.elements[5];
+	result[8u] = ori.elements[8];
+	//result.assign(ori.elements, ori.elements + 9);
+	return result;
+}
+
+Json::Value ZigJS::GetJointsJsonList(XnUserID userid)
+{
+	Json::Value result(Json::arrayValue);
+	XnSkeletonJointTransformation jointData;
+
+	// quick out if not tracking
+	if (!s_users.GetSkeletonCap().IsTracking(userid)) {
+		return result;
+	}
+
+	int jointCount = 0;
+	for (int i=XN_SKEL_HEAD; i<= XN_SKEL_RIGHT_FOOT; i++) {
+		if (s_users.GetSkeletonCap().IsJointAvailable((XnSkeletonJoint)i)) {
+			jointCount++;
+		}
+	}
+	result.resize(jointCount);
+	int position = 0;
+	// head is the first, right foot the last. probably not the best way.
+	for (int i=XN_SKEL_HEAD; i<= XN_SKEL_RIGHT_FOOT; i++) {
+		if (s_users.GetSkeletonCap().IsJointAvailable((XnSkeletonJoint)i)) {
+			s_users.GetSkeletonCap().GetSkeletonJoint(userid, (XnSkeletonJoint)i, jointData);
+			Json::Value joint(Json::objectValue);
+			joint["id"] = i;
+			joint["position"] = PositionToValue(jointData.position.position);
+			joint["rotation"] = OrientationToValue(jointData.orientation.orientation);
+			joint["positionconfidence"] = jointData.position.fConfidence;
+			joint["rotationconfidence"] = jointData.orientation.fConfidence;
+			result[position] = joint;
+			position++;
+		}
+	}
+
+	return result;
+}
+
+Json::Value ZigJS::MakeUsersJsonList()
+{
+	// get the users
+	XnUInt16 nUsers = MAX_USERS;
+	XnUserID aUsers[MAX_USERS];
+	s_users.GetUsers(aUsers, nUsers);
+
+	// construct JS object
+	Json::Value jsUsers(Json::arrayValue);
+	jsUsers.resize(nUsers);
+	XnPoint3D pos;
+	for (int i = 0; i < nUsers; i++) {
+		s_users.GetCoM(aUsers[i], pos);
+		Json::Value user(Json::objectValue);
+		user["tracked"] = s_users.GetSkeletonCap().IsTracking(aUsers[i]);
+		user["centerofmass"] = PositionToValue(pos);
+		user["id"] = aUsers[i];
+		user["joints"] = GetJointsJsonList(aUsers[i]);
+		jsUsers[i] = user;
+	}
+
+	return jsUsers;
+}
+
+Json::Value ZigJS::MakeHandsJsonList()
+{
+	Json::Value jsHands(Json::arrayValue);
+	jsHands.resize(s_handpoints.size());
+	int idx = 0;
+	for(std::list<HandPoint>::iterator i = s_handpoints.begin(); i != s_handpoints.end(); i++) {
+		Json::Value hand(Json::objectValue);
+		hand["id"] = i->handid;
+		hand["userid"] = i->userid;
+		hand["position"] = PositionToValue(i->position);
+		jsHands[idx] = hand;
+		idx++;
+	}
+
+	return jsHands;
+}
+
+
+//END JSON
+
+
+static Json::FastWriter writer;
 void ZigJS::ReadFrame()
 {
 	if (s_quit) return;
@@ -243,17 +355,19 @@ void ZigJS::ReadFrame()
 
 	if (s_lastFrame == (int)depthMD.FrameID()) return; // not a new frame, do nothing
 
-	s_lastFrame = (int)depthMD.FrameID();
-	s_users.GetUserPixels(0, sceneMD);
-
-	FB::VariantList jsUsers = MakeUsersList();
-	FB::VariantList jsHands = MakeHandsList();
-	FB::variant imageData; //= *bitmap_from_depth(depthMD, sceneMD);
-
 	// get active listeners listeners
 	if (s_listeners.empty()) {
 		return;
 	}
+
+	s_lastFrame = (int)depthMD.FrameID();
+	s_users.GetUserPixels(0, sceneMD);
+
+	Json::Value pluginData;
+	pluginData["hands"] = MakeHandsJsonList();
+	pluginData["users"] = MakeUsersJsonList();
+	std::string eventData = writer.write(pluginData);
+	FB::variant imageData; //= *bitmap_from_depth(depthMD, sceneMD);
 
 	bool marshaledImage = false;
 	for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
@@ -270,7 +384,8 @@ void ZigJS::ReadFrame()
 				}
 				//realPtr->setUsers(jsUsers);
 				//realPtr->setHands(jsHands);
-				realPtr->onNewFrame(jsUsers, jsHands);
+				//realPtr->onNewFrame(jsUsers, jsHands);
+				realPtr->onNewFrame(eventData);
 			} catch(const FB::script_error&) {
 				// means the JSAPI is for a dead tab, most likely. 
 				i = s_listeners.erase(i);

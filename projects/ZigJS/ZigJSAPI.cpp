@@ -126,10 +126,12 @@ void ZigJSAPI::set_firingEvents(bool firingEvents)
 	this->firingEvents = firingEvents;
 }
 
-void ZigJSAPI::onNewFrame(const FB::variant& users, const FB::variant& hands)
+//void ZigJSAPI::onNewFrame(const FB::variant& users, const FB::variant& hands)
+void ZigJSAPI::onNewFrame(const std::string& blah)
 {
 	if (firingEvents) {
-		fire_NewFrame(users, hands);
+		//fire_NewFrame(users, hands);
+		fire_NewFrame(blah);
 	}
 }
 

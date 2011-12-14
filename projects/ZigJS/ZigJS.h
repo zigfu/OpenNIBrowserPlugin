@@ -44,7 +44,7 @@ private:
 	static XN_THREAD_HANDLE s_threadHandle;
 
 	static std::list<ZigJSAPIWeakPtr > s_listeners;
-	static boost::recursive_mutex s_listenersMutex;
+	//static boost::recursive_mutex s_listenersMutex; //unneeded since we're running everything on the same thread now
 
 	// UI callbacks
 	static void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);

@@ -129,11 +129,11 @@ XN_THREAD_HANDLE ZigJS::s_threadHandle = NULL;
 volatile bool ZigJS::s_quit = false;
 
 std::list< ZigJSAPIWeakPtr > ZigJS::s_listeners;
-boost::recursive_mutex ZigJS::s_listenersMutex;
+//boost::recursive_mutex ZigJS::s_listenersMutex;
 
 void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 {
-	boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
+//	boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
 	s_listeners.push_back(listener);
 }
 

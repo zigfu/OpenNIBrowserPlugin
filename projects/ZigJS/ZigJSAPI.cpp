@@ -30,7 +30,7 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
     registerProperty("firingEvents",  make_property(this, &ZigJSAPI::get_firingEvents, &ZigJSAPI::set_firingEvents));
 	registerMethod("update", make_method(this, &ZigJSAPI::update));
-	registerAttribute("version", VERSION, true); 
+	registerAttribute("version", FBSTRING_PLUGIN_VERSION, true); 
 
 	XN_THREAD_HANDLE handle;
 	XnStatus nRetVal = xnOSCreateThread((XN_THREAD_PROC_PROTO)timerThread, this, &handle);

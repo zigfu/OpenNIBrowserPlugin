@@ -34,7 +34,7 @@ set(MOZILLA_PLUGINID "zigfu.com/ZigJS")
 # strings
 set(FBSTRING_CompanyName "ZigFu")
 set(FBSTRING_FileDescription "Motion control in the browser")
-set(FBSTRING_PLUGIN_VERSION "1.0.0.0")
+set(FBSTRING_PLUGIN_VERSION "0.9.1.0")
 set(FBSTRING_LegalCopyright "Copyright 2011 ZigFu")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "ZigJS")

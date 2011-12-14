@@ -22,7 +22,7 @@ typedef unsigned long thread_ret_t;
 typedef void *thread_ret_t;
 #endif
 
-const std::string VERSION = "0.9";
+const std::string VERSION = "0.91";
 
 class ZigJSAPI : public FB::JSAPIAuto
 {

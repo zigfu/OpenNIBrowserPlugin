@@ -11,7 +11,7 @@ set(COMPANY_NAME "ZigFu")
 
 # ActiveX constants:
 set(FBTYPELIB_NAME ZigJSLib)
-set(FBTYPELIB_DESC "ZigJS 0.92 Type Library")
+set(FBTYPELIB_DESC "ZigJS 0.921 Type Library")
 set(IFBControl_DESC "ZigJS Control Interface")
 set(FBControl_DESC "ZigJS Control Class")
 set(IFBComJavascriptObject_DESC "ZigJS IComJavascriptObject Interface")
@@ -34,7 +34,7 @@ set(MOZILLA_PLUGINID "zigfu.com/ZigJS")
 # strings
 set(FBSTRING_CompanyName "ZigFu")
 set(FBSTRING_FileDescription "Motion control in the browser")
-set(FBSTRING_PLUGIN_VERSION "0.9.2.0")
+set(FBSTRING_PLUGIN_VERSION "0.9.2.1")
 set(FBSTRING_LegalCopyright "Copyright 2011 ZigFu")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "ZigJS")

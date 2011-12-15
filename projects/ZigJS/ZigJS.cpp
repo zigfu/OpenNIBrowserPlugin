@@ -748,7 +748,7 @@ FB::JSAPIPtr ZigJS::createJSAPI()
     // m_host is the BrowserHost
     ZigJSAPIPtr newJSAPI = boost::make_shared<ZigJSAPI>(FB::ptr_cast<ZigJS>(shared_from_this()), m_host);
 	ZigJS::AddListener(newJSAPI);
-	newJSAPI->startTimerThread(newJSAPI);
+	ZigJSAPI::startTimerThread(newJSAPI);
 	return newJSAPI;
 }
 

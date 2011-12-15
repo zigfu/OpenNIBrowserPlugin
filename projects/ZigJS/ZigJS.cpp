@@ -388,7 +388,10 @@ void ZigJS::ReadFrame()
 				//realPtr->onNewFrame(jsUsers, jsHands);
 				realPtr->onNewFrame(eventData);
 			} catch(const FB::script_error&) {
-				// means the JSAPI is for a dead tab, most likely. 
+				// means the JSAPI is for a dead window, most likely. 
+				i = s_listeners.erase(i);
+			} catch(const std::runtime_error&) {
+				// means the JSAPI is for a dead window, most likely. 
 				i = s_listeners.erase(i);
 			}
 			++i;
@@ -466,6 +469,8 @@ void XN_CALLBACK_TYPE ZigJS::HandDestroyHandler(xn::HandsGenerator& generator, X
 		if (i->handid == user) {
 			s_handpoints.erase(i);
 			break;
+		} else {
+			++i;
 		}
 	}
 	/*
@@ -743,6 +748,7 @@ FB::JSAPIPtr ZigJS::createJSAPI()
     // m_host is the BrowserHost
     ZigJSAPIPtr newJSAPI = boost::make_shared<ZigJSAPI>(FB::ptr_cast<ZigJS>(shared_from_this()), m_host);
 	ZigJS::AddListener(newJSAPI);
+	newJSAPI->startTimerThread(newJSAPI);
 	return newJSAPI;
 }
 

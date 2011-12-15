@@ -11,6 +11,7 @@
 
 #include "ZigJSAPI.h"
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
 using namespace boost::interprocess::detail;
 
@@ -37,15 +38,11 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	registerMethod("update", make_method(this, &ZigJSAPI::update));
 	registerAttribute("version", FBSTRING_PLUGIN_VERSION, true); 
 
-	XN_THREAD_HANDLE handle;
-	XnStatus nRetVal = xnOSCreateThread((XN_THREAD_PROC_PROTO)timerThread, this, &handle);
-	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_DEBUG("xnInit", "fail start thread");
-		return;
-	} else {
-		FBLOG_DEBUG("xnInit", "ok start thread");
-	}
+}
 
+void ZigJSAPI::startTimerThread(const ZigJSAPIPtr& ptr)
+{
+	boost::thread t(boost::bind(&ZigJSAPI::timerThread, ptr));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -151,15 +148,15 @@ void ZigJSAPI::update()
 	atomic_dec32(&update_queue_count);
 }
 
-thread_ret_t XN_CALLBACK_TYPE ZigJSAPI::timerThread(void * param)
+void ZigJSAPI::timerThread(ZigJSAPIPtr thisptr)
 {
-	ZigJSAPI * instanceRaw = (ZigJSAPI *)param;
 	//TODO: should be changed to boost::dynamic_pointer_cast<shudder>() (or maybe chunder)
-	ZigJSAPIWeakPtr instance = boost::dynamic_pointer_cast<ZigJSAPI>(instanceRaw->shared_from_this());
+	ZigJSAPIWeakPtr instance = thisptr;
+	thisptr.reset();
 	while (1) {
 		xnOSSleep(30); // TODO: something better
 		ZigJSAPIPtr realPtr = instance.lock();
-		if (!realPtr) return (thread_ret_t)NULL;
+		if (!realPtr) return;
 		boost::uint32_t waitCount = atomic_inc32(&update_queue_count);
 		if (waitCount < max_update_queue_count) {
 			if (!realPtr->m_host->ScheduleOnMainThread(realPtr, boost::bind(&ZigJSAPI::update, realPtr)))

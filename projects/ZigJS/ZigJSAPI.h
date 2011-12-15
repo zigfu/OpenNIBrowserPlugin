@@ -32,7 +32,7 @@ public:
     virtual ~ZigJSAPI();
 
     ZigJSPtr getPlugin();
-
+	static void startTimerThread(const ZigJSAPIPtr& ptr);
     // Event helpers
 	FB_JSAPI_EVENT(WaveGesture, 3, (float,float,float));
 	FB_JSAPI_EVENT(HandCreate, 5, (int,float,float,float,float));
@@ -73,7 +73,7 @@ private:
 
 	void update();
 
-	static thread_ret_t XN_CALLBACK_TYPE timerThread(void * param);
+	static void timerThread(ZigJSAPIPtr thisptr);
 	static boost::uint32_t update_queue_count;
 	static const boost::uint32_t max_update_queue_count;
 	//TODO: unhack

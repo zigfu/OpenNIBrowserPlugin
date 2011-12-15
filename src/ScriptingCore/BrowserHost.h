@@ -165,7 +165,7 @@ namespace FB
         /// @since 1.3.0
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         template<class C, class Functor>
-        void ScheduleOnMainThread(const boost::shared_ptr<C>& obj, Functor func);
+        bool ScheduleOnMainThread(const boost::shared_ptr<C>& obj, Functor func);
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         /// @fn static void AsyncHtmlLog(void *)

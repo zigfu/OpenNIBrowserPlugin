@@ -164,9 +164,8 @@ thread_ret_t XN_CALLBACK_TYPE ZigJSAPI::timerThread(void * param)
 		if (waitCount < max_update_queue_count) {
 			try {
 				realPtr->m_host->ScheduleOnMainThread(realPtr, boost::bind(&ZigJSAPI::update, realPtr));
-			} catch(...) {
+			} catch(const FB::script_error&) {
 				atomic_dec32(&update_queue_count);
-				throw;
 			}
 		} else {
 			atomic_dec32(&update_queue_count);

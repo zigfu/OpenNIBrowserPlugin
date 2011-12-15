@@ -366,6 +366,7 @@ void ZigJS::ReadFrame()
 	Json::Value pluginData;
 	pluginData["hands"] = MakeHandsJsonList();
 	pluginData["users"] = MakeUsersJsonList();
+	pluginData["frameId"] = s_lastFrame;
 	std::string eventData = writer.write(pluginData);
 	FB::variant imageData; //= *bitmap_from_depth(depthMD, sceneMD);
 

@@ -116,6 +116,7 @@ namespace FB {
         if (!host->ScheduleAsyncCall(&CrossThreadCall::asyncCallbackFunctor, call)) {
             // Host is likely shut down; at any rate, this didn't work. Since it's asynchronous, fail silently
             delete call;
+			throw FB::script_error("Failed to schedule async call!");
             return;
         }
     }

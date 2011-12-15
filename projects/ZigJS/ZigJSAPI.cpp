@@ -11,6 +11,11 @@
 
 #include "ZigJSAPI.h"
 #include <boost/format.hpp>
+#include <boost/interprocess/detail/atomic.hpp>
+using namespace boost::interprocess::detail;
+
+boost::uint32_t ZigJSAPI::update_queue_count = 0;
+const boost::uint32_t ZigJSAPI::max_update_queue_count = 2;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,7 +142,13 @@ void ZigJSAPI::onNewFrame(const std::string& blah)
 
 void ZigJSAPI::update() 
 {
-	getPlugin()->ReadFrame();
+	try {
+		getPlugin()->ReadFrame();
+	} catch(...) {
+		atomic_dec32(&update_queue_count);
+		throw;
+	}
+	atomic_dec32(&update_queue_count);
 }
 
 thread_ret_t XN_CALLBACK_TYPE ZigJSAPI::timerThread(void * param)
@@ -149,7 +160,18 @@ thread_ret_t XN_CALLBACK_TYPE ZigJSAPI::timerThread(void * param)
 		xnOSSleep(30); // TODO: something better
 		ZigJSAPIPtr realPtr = instance.lock();
 		if (!realPtr) return (thread_ret_t)NULL;
-		realPtr->m_host->ScheduleOnMainThread(realPtr, boost::bind(&ZigJSAPI::update, realPtr));
+		boost::uint32_t waitCount = atomic_inc32(&update_queue_count);
+		if (waitCount < max_update_queue_count) {
+			try {
+				realPtr->m_host->ScheduleOnMainThread(realPtr, boost::bind(&ZigJSAPI::update, realPtr));
+			} catch(...) {
+				atomic_dec32(&update_queue_count);
+				throw;
+			}
+		} else {
+			atomic_dec32(&update_queue_count);
+		}
+
 	}
 }
 

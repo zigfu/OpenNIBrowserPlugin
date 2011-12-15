@@ -74,7 +74,8 @@ private:
 	void update();
 
 	static thread_ret_t XN_CALLBACK_TYPE timerThread(void * param);
-
+	static boost::uint32_t update_queue_count;
+	static const boost::uint32_t max_update_queue_count;
 	//TODO: unhack
 public:
 	void setImage(FB::JSAPIPtr img);

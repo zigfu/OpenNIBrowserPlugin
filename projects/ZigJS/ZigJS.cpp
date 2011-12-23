@@ -326,6 +326,7 @@ Json::Value ZigJS::MakeHandsJsonList()
 		hand["id"] = i->handid;
 		hand["userid"] = i->userid;
 		hand["position"] = PositionToValue(i->position);
+		hand["focusposition"] = PositionToValue(i->focusposition);
 		jsHands[idx] = hand;
 		idx++;
 	}
@@ -417,7 +418,7 @@ void XN_CALLBACK_TYPE ZigJS::GestureRecognizedHandler(xn::GestureGenerator& gene
 
 void XN_CALLBACK_TYPE ZigJS::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
-	s_handpoints.push_back(HandPoint(user, WhichUserDoesThisPointBelongTo(*pPosition), *pPosition));
+	s_handpoints.push_back(HandPoint(user, WhichUserDoesThisPointBelongTo(*pPosition), *pPosition, *pPosition));
 	/*
 	// send to listeners
 	{

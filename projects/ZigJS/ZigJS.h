@@ -27,8 +27,10 @@ public:
 	int handid;
 	int userid;
 	XnPoint3D position;
-	HandPoint(int handid, int userid, XnPoint3D position)
-		: handid(handid), userid(userid), position(position) 
+	XnPoint3D focusposition;
+
+	HandPoint(int handid, int userid, XnPoint3D position, XnPoint3D focusposition)
+		: handid(handid), userid(userid), position(position), focusposition(focusposition)
 	{}
 
 };

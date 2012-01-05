@@ -574,6 +574,8 @@ void XN_CALLBACK_TYPE ZigJS::OnCalibrationEnd(xn::SkeletonCapability& skeleton, 
 	}	
 }
 
+boost::shared_ptr<HTTP::HTTPService> ZigJS::s_HTTPService;
+boost::weak_ptr<ProxyHandler> ZigJS::s_ProxyHandler;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJS::StaticInitialize()
@@ -586,6 +588,11 @@ void ZigJS::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
+	s_HTTPService = HTTP::HTTPService::create("127.0.0.1", 1234, "localhost");
+	boost::shared_ptr<ProxyHandler> proxy(boost::make_shared<ProxyHandler>());
+	s_ProxyHandler = proxy;
+	s_HTTPService->registerHandler(proxy);
+
 	XnStatus nRetVal = XN_STATUS_OK;
 	nRetVal = s_context.Init();
 	if (nRetVal != XN_STATUS_OK) {
@@ -678,6 +685,11 @@ void ZigJS::StaticDeinitialize()
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
 	s_quit = true;
+
+	s_HTTPService->terminate();
+	s_HTTPService.reset();
+
+
 	//XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
     XnStatus nRetVal = xnOSWaitForThreadExit(s_threadHandle, -1); // wait till quit
 	if (XN_STATUS_OK != nRetVal) {

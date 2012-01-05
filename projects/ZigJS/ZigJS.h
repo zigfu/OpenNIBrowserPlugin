@@ -20,6 +20,8 @@
 #include <XnCppWrapper.h>
 
 #include "json/json.h"
+#include "HTTPService.h"
+#include "ProxyHandler.h"
 
 class HandPoint
 {
@@ -77,6 +79,9 @@ private:
 
 	// we keep a list of hand points
 	static std::list<HandPoint> s_handpoints;
+
+	static boost::shared_ptr<HTTP::HTTPService> s_HTTPService;
+	static boost::weak_ptr<ProxyHandler> s_ProxyHandler;
 
 public:
 	static xn::Context s_context;

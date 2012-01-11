@@ -85,6 +85,7 @@ public:
 	static xn::HandsGenerator s_hands;
 	static xn::UserGenerator s_users;
 	static volatile bool s_quit;
+	static volatile bool s_initialized;
 
 	static int s_lastFrame;
 

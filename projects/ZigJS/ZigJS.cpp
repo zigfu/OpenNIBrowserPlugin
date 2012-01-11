@@ -127,6 +127,7 @@ xn::UserGenerator ZigJS::s_users;
 int ZigJS::s_lastFrame;
 XN_THREAD_HANDLE ZigJS::s_threadHandle = NULL;
 volatile bool ZigJS::s_quit = false;
+volatile bool ZigJS::s_initialized = false;
 
 std::list< ZigJSAPIWeakPtr > ZigJS::s_listeners;
 //boost::recursive_mutex ZigJS::s_listenersMutex;
@@ -341,7 +342,7 @@ Json::Value ZigJS::MakeHandsJsonList()
 static Json::FastWriter writer;
 void ZigJS::ReadFrame()
 {
-	if (s_quit) return;
+	if ((s_quit) || (!s_initialized)) return;
 
 	xn::DepthMetaData depthMD;
 	xn::SceneMetaData sceneMD;
@@ -601,7 +602,7 @@ void ZigJS::StaticInitialize()
 	xnOSStrCopy(license->strVendor, "PrimeSense", sizeof(license->strVendor));
 	s_context.AddLicense(*license);
 
-	s_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, s_depth);
+	nRetVal = s_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, s_depth);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get depth");
 		s_lastFrame = -6;
@@ -610,7 +611,7 @@ void ZigJS::StaticInitialize()
 		FBLOG_DEBUG("xnInit", "ok get depth");
 	}
 	
-	s_context.CreateAnyProductionTree(XN_NODE_TYPE_GESTURE, NULL, s_gestures);
+	nRetVal = s_context.CreateAnyProductionTree(XN_NODE_TYPE_GESTURE, NULL, s_gestures);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get gesture");
 		s_lastFrame = -6;
@@ -619,7 +620,7 @@ void ZigJS::StaticInitialize()
 		FBLOG_INFO("xnInit", "ok get gesture");
 	}
 	
-	s_context.CreateAnyProductionTree(XN_NODE_TYPE_HANDS, NULL, s_hands);
+	nRetVal = s_context.CreateAnyProductionTree(XN_NODE_TYPE_HANDS, NULL, s_hands);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get hands");
 		s_lastFrame = -6;
@@ -628,7 +629,7 @@ void ZigJS::StaticInitialize()
 		FBLOG_INFO("xnInit", "ok get hands");
 	}
 
-	s_context.CreateAnyProductionTree(XN_NODE_TYPE_USER, NULL, s_users);
+	nRetVal = s_context.CreateAnyProductionTree(XN_NODE_TYPE_USER, NULL, s_users);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get hands");
 		s_lastFrame = -6;
@@ -640,8 +641,7 @@ void ZigJS::StaticInitialize()
 	// make sure global mirror is on
 	s_context.SetGlobalMirror(true);
 
-	XnCallbackHandle ignore;
-
+		XnCallbackHandle ignore;
 	// register to gesture/hands callbacks
 	s_gestures.RegisterGestureCallbacks(&ZigJS::GestureRecognizedHandler, NULL, NULL, ignore);
 	s_hands.RegisterHandCallbacks(&ZigJS::HandCreateHandler, &ZigJS::HandUpdateHandler, &ZigJS::HandDestroyHandler, NULL, ignore);
@@ -651,8 +651,6 @@ void ZigJS::StaticInitialize()
 	s_users.GetSkeletonCap().RegisterCalibrationCallbacks(&ZigJS::OnCalibrationStart, &OnCalibrationEnd, NULL, ignore);
 	s_users.GetSkeletonCap().SetSmoothing(0.5);
 	s_users.GetPoseDetectionCap().RegisterToPoseCallbacks(&ZigJS::OnPoseDetected, NULL, NULL, ignore);
-
-	s_quit = false;
 
 	s_gestures.AddGesture ("Wave",  NULL); //no bounding box
 	s_gestures.AddGesture ("Click",  NULL); //no bounding box
@@ -664,6 +662,8 @@ void ZigJS::StaticInitialize()
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
 	}
+	s_quit = false;
+	s_initialized = true;
 }
 
 
@@ -679,12 +679,13 @@ void ZigJS::StaticDeinitialize()
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
 	s_quit = true;
+	s_initialized = false;
 	//XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
-    XnStatus nRetVal = xnOSWaitForThreadExit(s_threadHandle, -1); // wait till quit
-	if (XN_STATUS_OK != nRetVal) {
-		FBLOG_DEBUG("deinit", "failed waiting on thread to quit");
-		return;
-	}
+ //   XnStatus nRetVal = xnOSWaitForThreadExit(s_threadHandle, -1); // wait till quit
+	//if (XN_STATUS_OK != nRetVal) {
+	//	FBLOG_DEBUG("deinit", "failed waiting on thread to quit");
+	//	return;
+	//}
 	s_hands.Release();
 	s_gestures.Release();
 	s_depth.Release();

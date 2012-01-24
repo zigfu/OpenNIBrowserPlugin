@@ -15,6 +15,7 @@ Copyright 2009 PacketPass Inc, Georg Fritzsche,
 
 #include <string>
 #include <sstream>
+#include "Timer.h"
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
 #include <boost/weak_ptr.hpp>
@@ -58,6 +59,7 @@ public:
     double asDouble(const FB::variant& a);
     const boost::optional<std::string> optionalTest(const std::string& test1, const boost::optional<std::string>& str);
 
+    std::string charArray(const std::vector<char>& arr);
     std::string listArray(const std::vector<std::string>&);
     FB::VariantList reverseArray(const std::vector<std::string>& arr);
     FB::VariantList getObjectKeys(const FB::JSObjectPtr& arr);
@@ -86,6 +88,9 @@ public:
     void postURL(const std::string& url, const std::string& postdata, const FB::JSObjectPtr& callback);
     void getURLCallback(const FB::JSObjectPtr& callback, bool success, const FB::HeaderMap& headers,
         const boost::shared_array<uint8_t>& data, const size_t size);
+	void SetTimeout(const FB::JSObjectPtr& callback, long timeout);
+    FB::VariantMap systemHelpersTest();
+	void timerCallback(const FB::JSObjectPtr& callback);
 
     FB::VariantMap getProxyInfo(const boost::optional<std::string>& url);
 
@@ -95,6 +100,7 @@ private:
     FB::BrowserHostPtr m_host;
     SimpleMathAPIPtr m_simpleMath;
     FBTestPluginWeakPtr m_pluginWeak;
+    std::vector<boost::shared_ptr<FB::Timer> > timers;
 
     std::string m_testString;
 };

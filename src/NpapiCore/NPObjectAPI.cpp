@@ -329,7 +329,7 @@ void FB::Npapi::NPObjectAPI::callMultipleFunctions( const std::string& name, con
 
     NpapiBrowserHostPtr browser(getHost());
     if (!browser->isMainThread()) {
-        return (void)browser->ScheduleOnMainThread(shared_from_this(), boost::bind(&NPObjectAPI::callMultipleFunctions, this, name, args, direct, ifaces));
+        return browser->ScheduleOnMainThread(shared_from_this(), boost::bind(&NPObjectAPI::callMultipleFunctions, this, name, args, direct, ifaces));
     }
     NPVariant retVal;
 

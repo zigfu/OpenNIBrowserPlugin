@@ -21,6 +21,7 @@ Copyright 2009 PacketPass Inc, Georg Fritzsche,
 #include "SimpleMathAPI.h"
 #include "ThreadRunnerAPI.h"
 #include "SimpleStreams.h"
+#include "SystemHelpers.h"
 #include <boost/make_shared.hpp>
 
 #include "FBTestPluginAPI.h"
@@ -34,6 +35,7 @@ FBTestPluginAPI::FBTestPluginAPI(const FBTestPluginPtr& plugin, const FB::Browse
     registerMethod(L"asBool",  make_method(this, &FBTestPluginAPI::asBool));
     registerMethod(L"asInt",  make_method(this, &FBTestPluginAPI::asInt));
     registerMethod("asDouble",  make_method(this, &FBTestPluginAPI::asDouble));
+    registerMethod("charArray",  make_method(this, &FBTestPluginAPI::charArray));
     registerMethod("listArray",  make_method(this, &FBTestPluginAPI::listArray));
     registerMethod("reverseArray",  make_method(this, &FBTestPluginAPI::reverseArray));
     registerMethod("getUserData",  make_method(this, &FBTestPluginAPI::getUserData));
@@ -49,7 +51,8 @@ FBTestPluginAPI::FBTestPluginAPI(const FBTestPluginPtr& plugin, const FB::Browse
     registerMethod("getURL", make_method(this, &FBTestPluginAPI::getURL));
     registerMethod("postURL", make_method(this, &FBTestPluginAPI::postURL));
     registerMethod("openPopup", make_method(this, &FBTestPluginAPI::openPopup));
-
+    registerMethod("setTimeout",  make_method(this, &FBTestPluginAPI::SetTimeout));
+    registerMethod("systemHelpersTest", make_method(this, &FBTestPluginAPI::systemHelpersTest));
     registerMethod(L"скажи",  make_method(this, &FBTestPluginAPI::say));
     
     registerMethod("addWithSimpleMath", make_method(this, &FBTestPluginAPI::addWithSimpleMath));
@@ -199,6 +202,21 @@ FB::VariantList FBTestPluginAPI::getObjectValues(const FB::JSObjectPtr& arr)
     return outArr;
 }
 
+std::string FBTestPluginAPI::charArray(const std::vector<char>& arr)
+{
+    std::string outStr;
+    bool start(true);
+    for (std::vector<char>::const_iterator it = arr.begin(); it != arr.end(); it++)
+    {
+        if (!start) {
+            outStr += ", ";
+        }
+        start = false;
+        outStr += *it;
+    }
+    return outStr;
+}
+
 std::string FBTestPluginAPI::listArray(const std::vector<std::string>& arr)
 {
     std::string outStr;
@@ -345,6 +363,31 @@ void FBTestPluginAPI::getURLCallback(const FB::JSObjectPtr& callback, bool succe
     } else {
         callback->InvokeAsync("", FB::variant_list_of(false));
     }
+}
+
+void FBTestPluginAPI::SetTimeout(const FB::JSObjectPtr& callback, long timeout)
+{
+	bool recursive = false;
+	FB::TimerPtr timer = FB::Timer::getTimer(timeout, recursive, boost::bind(&FBTestPluginAPI::timerCallback, this, callback));
+	timer->start();
+	timers.push_back(timer);
+}
+
+void FBTestPluginAPI::timerCallback(const FB::JSObjectPtr& callback)
+{
+	callback->Invoke("", FB::variant_list_of());
+	// TODO: delete This timer
+}
+
+FB::VariantMap FBTestPluginAPI::systemHelpersTest(){
+    FB::VariantMap result;
+    
+    result["homedir"] = FB::System::getHomeDirPath();
+    result["tempdir"] = FB::System::getTempPath();
+    result["appdata"] = FB::System::getAppDataPath("FBTestPlugin");
+    result["appdata_local"] = FB::System::getLocalAppDataPath("FBTestPlugin");
+
+    return result;
 }
 
 const boost::optional<std::string> FBTestPluginAPI::optionalTest( const std::string& test1, const boost::optional<std::string>& str )

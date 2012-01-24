@@ -79,7 +79,7 @@ void NpapiPluginMac::init(NPMIMEType pluginType, int16_t argc, char* argn[], cha
 
     // We can create our event model handler now.
     pluginEvt = PluginEventMacPtr(PluginEventMac::createPluginEventMac(m_eventModel));
-    
+
     // We can create our drawing model handler now. It will be made for the chosen drawing model.
     pluginWin = PluginWindowMacPtr(PluginWindowMac::createPluginWindowMac(m_drawingModel));
     if (pluginWin)
@@ -89,6 +89,10 @@ void NpapiPluginMac::init(NPMIMEType pluginType, int16_t argc, char* argn[], cha
         if (pluginEvt)
             pluginEvt->setPluginWindow(pluginWin);
         pluginWin->setPluginEvent(pluginEvt);
+
+        boost::optional<std::string> showdrawingmodel = pluginMain->getParam("showdrawingmodel");
+        if (showdrawingmodel && (0 != strcmp(showdrawingmodel->c_str(), "0")))
+            pluginWin->setShowDrawingModel(true);
     }
 }
 
@@ -134,11 +138,6 @@ int16_t NpapiPluginMac::GetValue(NPPVariable variable, void *value) {
                     pluginMain->SetWindow(pluginWin.get());
             }
             FBLOG_INFO("PluginCore", "GetValue(NPPVpluginCoreAnimationLayer)");
-        }   break;
-        case NPPVpluginScriptableNPObject:
-        {
-            res = NpapiPlugin::GetValue(variable, value);
-            FBLOG_INFO("PluginCore", "GetValue(NPPVpluginScriptableNPObject)");
         }   break;
         default:
             res = NpapiPlugin::GetValue(variable, value);

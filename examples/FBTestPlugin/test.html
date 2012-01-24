@@ -178,6 +178,8 @@
 
             addTest("mathApiAdd3B", "Use OBJECT.self custom JSAPI coming in from script (SimpleMath)");
             addTest("mathApiAdd4B", "Use OBJECT custom JSAPI coming in from script (SimpleMath) (should FAIL!)");
+            
+            addTest("systemHelpersTest", "Directory Helper functions.");
 
             addTest("countArray", "Count array length returned from JSAPI object");
             addTest("simpleFireEvent", "Simple event bind and fire test");
@@ -188,6 +190,7 @@
             //addTest("dangerousInject", "Dangerous injection");
             addTest("calltest", "Function.call method");
             addTest("applytest", "Function.apply method");
+            addTest("testSetTimeout", "SetTimeout Timer functionality.");
             markFailed("loaded");
             markFailed("loaded2");
             injectPlugin($("#pluginContainer"), pluginLoaded);
@@ -416,6 +419,15 @@
             }
             else
                 markPassed("countArray");
+            
+            var paths = plugin.systemHelpersTest();
+            markPassed("systemHelpersTest");
+            
+            for(var dir in paths) {
+                var value = paths[dir];                
+                $("#systemHelpersTest").append("<br>&nbsp;&nbsp;&nbsp;&nbsp;"
+                                               + dir + " = " + value);
+            }
 
             plugin.onfired = function (str) {
                 if (str == "some string") {
@@ -514,6 +526,11 @@
             } else {
                 markFailed("calltest");
             }
+			var setTimeoutCallback = function() {
+				alert("callback set timeout called");
+				console.warn("SetTimeout completed"); markPassed("testSetTimeout");}
+				// don't know how to set failed timeout.
+			plugin.setTimeout(setTimeoutCallback, 10000);
         }
         function PasswordDlg(message, onComplete) 
         {

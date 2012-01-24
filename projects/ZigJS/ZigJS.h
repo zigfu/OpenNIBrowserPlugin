@@ -41,7 +41,8 @@ public:
     static void StaticDeinitialize();
 
 	static void AddListener(ZigJSAPIWeakPtr listener);
-	static void ReadFrame();
+	static void ReadFrame(void *);
+	static void TimerCallback();
 	
 public:
     ZigJS();

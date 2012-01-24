@@ -19,6 +19,10 @@ std::list< ZigJSAPIWeakPtr > ZigJS::s_listeners;
 SensorOpenNIPtr ZigJS::s_sensor;
 FB::TimerPtr ZigJS::s_timer;
 
+// TODO: getting lazy with the class-belongingness here
+boost::mutex s_hostsMutex;
+std::list< FB::BrowserHostWeakPtr > s_hosts;
+
 void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 {
 //	boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
@@ -28,7 +32,7 @@ void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 //END JSON
 
 
-void ZigJS::ReadFrame()
+void ZigJS::ReadFrame(void *)
 {
 	//TODO: attempt reopening of sensor
 	if (!s_sensor->ReadFrame()) {
@@ -72,10 +76,29 @@ SensorOpenNIPtr ZigJS::InitSensor()
 void ZigJS::StaticInitialize()
 {
 	s_sensor = InitSensor();
-	s_timer = FB::Timer::getTimer(30, true, &ZigJS::ReadFrame);
+	s_timer = FB::Timer::getTimer(30, true, &ZigJS::TimerCallback);
 	s_timer->start();
 }
 
+void ZigJS::TimerCallback()
+{
+	FB::BrowserHostPtr host;
+	{
+		boost::mutex::scoped_lock lock(s_hostsMutex);
+		for(std::list<FB::BrowserHostWeakPtr>::iterator i = s_hosts.begin(); i != s_hosts.end(); ) {
+			FB::BrowserHostPtr realPtr = i->lock();
+			if (realPtr) {
+				host = realPtr;
+				++i; // keep going to make sure we clean stale instances
+			} else {
+				i = s_hosts.erase(i);
+			}
+		}
+	}
+	if (host) {
+		host->ScheduleAsyncCall(&ZigJS::ReadFrame, NULL);
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJS::StaticInitialize()
@@ -123,6 +146,8 @@ void ZigJS::onPluginReady()
     // created, and we are ready to interact with the page and such.  The
     // PluginWindow may or may not have already fire the AttachedEvent at
     // this point.
+	boost::mutex::scoped_lock lock(s_hostsMutex);
+	s_hosts.push_front(m_host);
 }
 
 void ZigJS::shutdown()

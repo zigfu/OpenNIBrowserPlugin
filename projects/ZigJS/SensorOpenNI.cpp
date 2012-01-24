@@ -451,10 +451,19 @@ void SensorOpenNI::OnCalibrationEndImpl(xn::SkeletonCapability& skeleton, const 
 		m_users.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
 	}	
 }
+void XN_CALLBACK_TYPE SensorOpenNI::ErrorCallback(XnStatus errorState, void *pCookie) {
+	FBLOG_INFO("errorShit", "global error!");
+	if (XN_STATUS_OK != errorState) {
+		reinterpret_cast<SensorOpenNI *>(pCookie)->m_error = true;
+	}
+}
 
-SensorOpenNI::SensorOpenNI()
+SensorOpenNI::SensorOpenNI() : 
+	m_initialized(false), m_error(false),
+	m_lastNewDataTime(0xFFFFFFFFFFFFFFFFULL)
 {
-	    // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
+	
+	// Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
 	XnStatus nRetVal = XN_STATUS_OK;
 	nRetVal = m_context.Init();
@@ -464,16 +473,29 @@ SensorOpenNI::SensorOpenNI()
 	} else {
 		FBLOG_INFO("xnInit", "ok context init");
 	}
-	//TODO: leaking some memory? 
-	XnLicense * license = new XnLicense();
-	xnOSStrCopy(license->strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(license->strKey));
-	xnOSStrCopy(license->strVendor, "PrimeSense", sizeof(license->strVendor));
-	m_context.AddLicense(*license);
+	nRetVal = m_context.RegisterToErrorStateChange(&SensorOpenNI::ErrorCallback, this, m_errorCB);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_INFO("xnInit", "fail register for error callback");
+		m_context.Release();
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok register for error callback");
+	}
+
+	xnOSStrCopy(m_license.strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(m_license.strKey));
+	xnOSStrCopy(m_license.strVendor, "PrimeSense", sizeof(m_license.strVendor));
+	m_context.AddLicense(m_license);
+	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_DEVICE, NULL, m_device);
+	if (nRetVal != XN_STATUS_OK) {
+		m_lastFrame = -6;
+		return;
+	}
 
 	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, m_depth);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get depth");
 		m_lastFrame = -6;
+		m_context.Release();
 		return;
 	} else {
 		FBLOG_DEBUG("xnInit", "ok get depth");
@@ -483,6 +505,7 @@ SensorOpenNI::SensorOpenNI()
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get gesture");
 		m_lastFrame = -6;
+		m_context.Release();
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok get gesture");
@@ -492,6 +515,7 @@ SensorOpenNI::SensorOpenNI()
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get hands");
 		m_lastFrame = -6;
+		m_context.Release();
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok get hands");
@@ -499,11 +523,12 @@ SensorOpenNI::SensorOpenNI()
 
 	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_USER, NULL, m_users);
 	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_DEBUG("xnInit", "fail get hands");
+		FBLOG_DEBUG("xnInit", "fail create production tree");
 		m_lastFrame = -6;
+		m_context.Release();
 		return;
 	} else {
-		FBLOG_INFO("xnInit", "ok get hands");
+		FBLOG_INFO("xnInit", "ok create production tree");
 	}
 
 	// make sure global mirror is on
@@ -534,16 +559,24 @@ SensorOpenNI::SensorOpenNI()
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
 		m_lastFrame = -1;
+		m_context.Release();
+		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
 	}
-	m_quit = false;
+	nRetVal = m_context.WaitAndUpdateAll(); // do a single real read
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_INFO("xnInit", "fail read frame");
+		m_lastFrame = -1;
+		m_context.Release();
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok read frame");
+	}
 	m_initialized = true;
 }
 
 SensorOpenNI::~SensorOpenNI() {
-	m_quit = true;
-	m_initialized = false;
 	//XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
  //   XnStatus nRetVal = xnOSWaitForThreadExit(s_threadHandle, -1); // wait till quit
 	//if (XN_STATUS_OK != nRetVal) {
@@ -553,28 +586,45 @@ SensorOpenNI::~SensorOpenNI() {
 	m_hands.Release();
 	m_gestures.Release();
 	m_depth.Release();
+	m_device.Release();
 	m_context.Release();
 }
-
+bool SensorOpenNI::Valid() const {
+	return m_initialized && (!m_error);
+}
 
 bool SensorOpenNI::ReadFrame() {
 	//TODO: refactor so that the per-frame results are encapsulated in an object
 	//      instead of having a stateful object
 
-	if ((m_quit) || (!m_initialized)) return false;
+	if (!Valid()) return false;
 	m_gotImage = false;
 
 	XnStatus nRetVal = m_context.WaitNoneUpdateAll();
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("ReadFrame", "fail wait & update");
+		m_initialized = false; // can't read no depth no more
 		return false; //TODO: throw exception (so we know to create a new reader thingy)
 	}
 
 	m_depth.GetMetaData(m_depthMD);
 
-	if (m_lastFrame == (int)m_depthMD.FrameID()) return false; // not a new frame, do nothing
-
+	if (m_lastFrame == (int)m_depthMD.FrameID()) {
+		if (m_lastNewDataTime == 0xFFFFFFFFFFFFFFFFULL) {
+			xnOSGetTimeStamp(&m_lastNewDataTime);
+		}
+		XnUInt64 currentTime;
+		xnOSGetTimeStamp(&currentTime);
+		if ((currentTime - m_lastNewDataTime) > 5*1000ULL) {
+			FBLOG_INFO("ReadFrame", "timed out waiting for new data!");
+			m_error = true;
+		}
+		return false; // not a new frame, do nothing
+	}
+	
 	m_lastFrame = (int)m_depthMD.FrameID();
+	xnOSGetTimeStamp(&m_lastNewDataTime);
+	//m_lastNewDataTime = m_depthMD.Timestamp();
 	m_users.GetUserPixels(0, m_sceneMD);
 
 	Json::Value pluginData;
@@ -585,9 +635,10 @@ bool SensorOpenNI::ReadFrame() {
 	return true;
 }
 
-const FB::variant& SensorOpenNI::GetImageBase64() const {
+boost::shared_ptr< FB::variant > SensorOpenNI::GetImageBase64() const {
+	if (!Valid()) return boost::shared_ptr< FB::variant >();
 	if (!m_gotImage) {
-		m_imageData = *bitmap_from_depth(m_depthMD, m_sceneMD);
+		m_imageData = boost::make_shared< FB::variant >(*bitmap_from_depth(m_depthMD, m_sceneMD));
 		m_gotImage = true;
 	}
 	return m_imageData;

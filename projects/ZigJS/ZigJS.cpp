@@ -31,20 +31,39 @@ void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 
 //END JSON
 
-
+const int REOPEN_WAIT_FRAMES = 450;
 void ZigJS::ReadFrame(void *)
 {
-	//TODO: attempt reopening of sensor
+	// try reopening the sensor
+	if (!s_sensor) {
+		//TODO: mega-hack :(
+		static int frameRestCount = REOPEN_WAIT_FRAMES;
+		//s_sensor.reset();
+		frameRestCount++;
+		if (frameRestCount > REOPEN_WAIT_FRAMES) { //~10sec wait - magic number needed by OpenNI :(
+									//TODO: find another way
+			s_sensor = InitSensor();
+			frameRestCount = 0;
+		} else {
+			return;
+		}
+	}
+	if (!s_sensor->Valid()) {
+		s_sensor.reset();
+		return;
+	}
+
 	if (!s_sensor->ReadFrame()) {
 		return; // No data, do nothing...
 	}
+
 	for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 		ZigJSAPIPtr realPtr = i->lock();
 		if (realPtr) {
 			try {
 				FB::JSAPIPtr image = realPtr->getImage();
 				if (image) {
-					image->SetProperty("src", s_sensor->GetImageBase64());
+					image->SetProperty("src", *(s_sensor->GetImageBase64()));
 				}
 				realPtr->onNewFrame(s_sensor->GetEventData());
 				++i; // advance i if there were no exceptions

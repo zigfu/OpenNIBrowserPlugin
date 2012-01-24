@@ -8,6 +8,7 @@
 
 #include "PluginCore.h"
 #include "json/json.h"
+#include "Timer.h"
 
 //TODO: move away from header?
 class HandPoint
@@ -32,8 +33,8 @@ public:
 
 	bool ReadFrame(); //true if there is new data, false otherwise
 
-
-	const FB::variant& GetImageBase64() const;
+	bool Valid() const;
+	boost::shared_ptr< FB::variant > GetImageBase64() const;
 	const std::string& GetEventData() const;
 private:
 	FB::VariantList GetJointsList(XnUserID userid);
@@ -64,17 +65,20 @@ private:
 
 	// these are basically a lazily-evaluated and cached variable accessed through GetImageBase64
 	mutable bool m_gotImage;
-	mutable FB::variant m_imageData;
+	mutable boost::shared_ptr< FB::variant > m_imageData;
 
+	XnUInt64 m_lastNewDataTime;
 private:
 	XN_THREAD_HANDLE m_threadHandle;
 	xn::Context m_context;
+	xn::Device m_device;
 	xn::DepthGenerator m_depth;
 	xn::GestureGenerator m_gestures;
 	xn::HandsGenerator m_hands;
 	xn::UserGenerator m_users;
-	volatile bool m_quit;
 	volatile bool m_initialized;
+	volatile bool m_error;
+	XnLicense m_license;
 	
 	static void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
 	static void XN_CALLBACK_TYPE HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
@@ -103,6 +107,8 @@ private:
 	void OnCalibrationStartImpl(const XnUserID nUserId);
 	void OnCalibrationEndImpl(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess);
 
+	static void XN_CALLBACK_TYPE ErrorCallback(XnStatus errorState, void *pCookie);
+	XnCallbackHandle m_errorCB;
 };
 
 

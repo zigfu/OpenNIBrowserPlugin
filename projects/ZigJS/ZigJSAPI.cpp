@@ -11,12 +11,7 @@
 
 #include "ZigJSAPI.h"
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
-#include <boost/interprocess/detail/atomic.hpp>
-using namespace boost::interprocess::detail;
 
-boost::uint32_t ZigJSAPI::update_queue_count = 0;
-const boost::uint32_t ZigJSAPI::max_update_queue_count = 2;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,14 +30,7 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	firingEvents = true;
 	registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
     registerProperty("firingEvents",  make_property(this, &ZigJSAPI::get_firingEvents, &ZigJSAPI::set_firingEvents));
-	registerMethod("update", make_method(this, &ZigJSAPI::update));
 	registerAttribute("version", FBSTRING_PLUGIN_VERSION, true); 
-
-}
-
-void ZigJSAPI::startTimerThread(const ZigJSAPIPtr& ptr)
-{
-	boost::thread t(boost::bind(&ZigJSAPI::timerThread, ptr));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,38 +125,6 @@ void ZigJSAPI::onNewFrame(const std::string& blah)
 	}
 }
 
-void ZigJSAPI::update() 
-{
-	try {
-		getPlugin()->ReadFrame();
-	} catch(...) {
-		atomic_dec32(&update_queue_count);
-		throw;
-	}
-	atomic_dec32(&update_queue_count);
-}
-
-void ZigJSAPI::timerThread(ZigJSAPIPtr thisptr)
-{
-	//TODO: should be changed to boost::dynamic_pointer_cast<shudder>() (or maybe chunder)
-	ZigJSAPIWeakPtr instance = thisptr;
-	thisptr.reset();
-	while (1) {
-		xnOSSleep(30); // TODO: something better
-		ZigJSAPIPtr realPtr = instance.lock();
-		if (!realPtr) return;
-		boost::uint32_t waitCount = atomic_inc32(&update_queue_count);
-		if (waitCount < max_update_queue_count) {
-			if (!realPtr->m_host->ScheduleOnMainThread(realPtr, boost::bind(&ZigJSAPI::update, realPtr)))
-			{
-				atomic_dec32(&update_queue_count);
-			}
-		} else {
-			atomic_dec32(&update_queue_count);
-		}
-
-	}
-}
 
 
 //TODO: unhack

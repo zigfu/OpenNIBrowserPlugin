@@ -14,25 +14,15 @@
 #include "BrowserHost.h"
 #include "ZigJS.h"
 
-#ifdef _WIN32
-// windows threads expect DWORD return value
-typedef unsigned long thread_ret_t;
-#else
-// pthreads expects void* return value
-typedef void *thread_ret_t;
-#endif
-
 class ZigJSAPI : public FB::JSAPIAuto
 {
 public:
 	
-//	void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
 
     ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host);
     virtual ~ZigJSAPI();
 
     ZigJSPtr getPlugin();
-	static void startTimerThread(const ZigJSAPIPtr& ptr);
     // Event helpers
 	FB_JSAPI_EVENT(WaveGesture, 3, (float,float,float));
 	FB_JSAPI_EVENT(HandCreate, 5, (int,float,float,float,float));
@@ -71,11 +61,6 @@ private:
 	void set_firingEvents(const bool firingEvents);
 	bool firingEvents;
 
-	void update();
-
-	static void timerThread(ZigJSAPIPtr thisptr);
-	static boost::uint32_t update_queue_count;
-	static const boost::uint32_t max_update_queue_count;
 	//TODO: unhack
 public:
 	void setImage(FB::JSAPIPtr img);

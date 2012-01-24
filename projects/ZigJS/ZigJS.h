@@ -15,79 +15,27 @@
 
 #include "PluginCore.h"
 
-#include <XnOpenNI.h>
-#include <XnLog.h>
-#include <XnCppWrapper.h>
-
 #include "json/json.h"
-
-class HandPoint
-{
-public:
-	int handid;
-	int userid;
-	XnPoint3D position;
-	XnPoint3D focusposition;
-
-	HandPoint(int handid, int userid, XnPoint3D position, XnPoint3D focusposition)
-		: handid(handid), userid(userid), position(position), focusposition(focusposition)
-	{}
-
-};
+#include "Timer.h"
 
 
-FB_FORWARD_PTR(ZigJS)
+FB_FORWARD_PTR(ZigJS);
 
-FB_FORWARD_PTR(ZigJSAPI)
+FB_FORWARD_PTR(ZigJSAPI);
+
+FB_FORWARD_PTR(SensorOpenNI);
 
 class ZigJS : public FB::PluginCore
 {
 private:
-	static XN_THREAD_HANDLE s_threadHandle;
 
 	static std::list<ZigJSAPIWeakPtr > s_listeners;
+	static SensorOpenNIPtr s_sensor;
 	//static boost::recursive_mutex s_listenersMutex; //unneeded since we're running everything on the same thread now
+	static SensorOpenNIPtr InitSensor(); // TODO: point to some factory function?
 
-	// UI callbacks
-	static void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
-	static void XN_CALLBACK_TYPE HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
-	static void XN_CALLBACK_TYPE HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
-	static void XN_CALLBACK_TYPE HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie);
-
-	// User callbacks
-	static void XN_CALLBACK_TYPE OnNewUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnLostUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnPoseDetected(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnCalibrationStart(xn::SkeletonCapability& skeleton, const XnUserID nUserId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnCalibrationEnd(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie);
-
-	static FB::VariantList GetJointsList(XnUserID userid);
-	static FB::VariantList PositionToVariant(XnPoint3D pos);
-	static FB::VariantList OrientationToVariant(XnMatrix3X3 ori);
-	static FB::VariantList MakeUsersList();
-	static FB::VariantList MakeHandsList();
-
-	static Json::Value GetJointsJsonList(XnUserID userid);
-	static Json::Value PositionToValue(XnPoint3D pos);
-	static Json::Value OrientationToValue(XnMatrix3X3 ori);
-	static Json::Value MakeUsersJsonList();
-	static Json::Value MakeHandsJsonList();
-
-	static XnUserID WhichUserDoesThisPointBelongTo(XnPoint3D point);
-
-	// we keep a list of hand points
-	static std::list<HandPoint> s_handpoints;
-
+	static FB::TimerPtr s_timer;
 public:
-	static xn::Context s_context;
-	static xn::DepthGenerator s_depth;
-	static xn::GestureGenerator s_gestures;
-	static xn::HandsGenerator s_hands;
-	static xn::UserGenerator s_users;
-	static volatile bool s_quit;
-	static volatile bool s_initialized;
-
-	static int s_lastFrame;
 
     static void StaticInitialize();
     static void StaticDeinitialize();

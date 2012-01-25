@@ -12,11 +12,11 @@
 #include "ZigJS.h"
 #include "json/json.h"
 #include "fbjson.h"
-#include "SensorOpenNI.h"
+#include "Sensor.h"
 
 std::list< ZigJSAPIWeakPtr > ZigJS::s_listeners;
 //boost::recursive_mutex ZigJS::s_listenersMutex;
-SensorOpenNIPtr ZigJS::s_sensor;
+SensorPtr ZigJS::s_sensor;
 FB::TimerPtr ZigJS::s_timer;
 
 // TODO: getting lazy with the class-belongingness here
@@ -81,9 +81,9 @@ void ZigJS::ReadFrame(void *)
 }
 
 
-SensorOpenNIPtr ZigJS::InitSensor()
+SensorPtr ZigJS::InitSensor()
 {
-	return boost::make_shared<SensorOpenNI>();
+	return Sensor::CreateSensor();
 }
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJS::StaticInitialize()

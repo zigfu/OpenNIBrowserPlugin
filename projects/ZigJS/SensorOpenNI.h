@@ -8,7 +8,7 @@
 
 #include "PluginCore.h"
 #include "json/json.h"
-#include "Timer.h"
+#include "Sensor.h"
 
 //TODO: move away from header?
 class HandPoint
@@ -26,7 +26,7 @@ public:
 };
 
 //TODO: inherit from some Sensor interface
-class SensorOpenNI {
+class SensorOpenNI : public Sensor {
 public:
 	SensorOpenNI();
 	virtual ~SensorOpenNI();

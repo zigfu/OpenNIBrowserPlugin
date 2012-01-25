@@ -23,16 +23,16 @@ FB_FORWARD_PTR(ZigJS);
 
 FB_FORWARD_PTR(ZigJSAPI);
 
-FB_FORWARD_PTR(SensorOpenNI);
+FB_FORWARD_PTR(Sensor);
 
 class ZigJS : public FB::PluginCore
 {
 private:
 
 	static std::list<ZigJSAPIWeakPtr > s_listeners;
-	static SensorOpenNIPtr s_sensor;
+	static SensorPtr s_sensor;
 	//static boost::recursive_mutex s_listenersMutex; //unneeded since we're running everything on the same thread now
-	static SensorOpenNIPtr InitSensor(); // TODO: point to some factory function?
+	static SensorPtr InitSensor(); // TODO: point to some factory function?
 
 	static FB::TimerPtr s_timer;
 public:

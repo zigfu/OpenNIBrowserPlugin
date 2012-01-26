@@ -683,3 +683,16 @@ boost::shared_ptr< FB::variant > SensorOpenNI::GetImageBase64() const {
 const std::string& SensorOpenNI::GetEventData() const {
 	return m_eventData;
 }
+
+#ifdef _WIN32
+#include <Windows.h>
+const TCHAR OPENNIDLL[] = TEXT("OpenNI.dll");
+bool SensorOpenNI::Available() {
+	return (GetModuleHandle(OPENNIDLL) != NULL) || (LoadLibrary(OPENNIDLL) != NULL);
+}
+#else
+// this is the only SDK available on non-windows, so we treat it as a prerequisite
+bool SensorOpenNI::Available() {
+	return true;
+}
+#endif

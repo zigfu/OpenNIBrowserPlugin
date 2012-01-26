@@ -5,11 +5,18 @@
 
 
 SensorPtr Sensor::CreateSensor() {
-#ifdef _WIN32 
-	return SensorPtr(new SensorKinectSDK);
-#else
-	return SensorPtr(new SensorOpenNI);
-#endif
+	//try opening KinectSDK, then OpenNI
+	SensorPtr result;
+	if (SensorKinectSDK::Available()) {
+		result = SensorPtr(new SensorKinectSDK);
+		if ((result) && (result->Valid())) {
+			return result;
+		}
+	}
+	if (SensorOpenNI::Available()) {
+		result = SensorPtr(new SensorOpenNI);
+	}
+	return result;
 }
 
 Sensor::~Sensor() {}

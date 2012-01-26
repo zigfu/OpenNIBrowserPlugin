@@ -95,17 +95,31 @@ typedef HRESULT (WINAPI *NuiCreateSensorByIndexFuncPtr)( int index, _Out_ INuiSe
 NuiCreateSensorByIndexFuncPtr pNuiCreateSensorByIndexFuncPtr = NULL;
 const TCHAR KINECTDLL[] = TEXT("Kinect10.dll");
  
+bool SensorKinectSDK::Available() {
+	return Init();
+}
+
+static HMODULE kinectDLL = NULL;
+static void SensorKinectSDK::Unload() {
+	if (NULL != kinectDLL) {
+		pNuiCreateSensorByIndexFuncPtr = NULL;
+		FreeLibrary(kinectDLL);
+		kinectDLL = NULL;
+	}
+}
 bool SensorKinectSDK::Init()
 {
 	if (pNuiCreateSensorByIndexFuncPtr) {
 		return true;
 	}
 	// note: we leak refs to the DLL (not that bad - we want to be loaded till the process dies anyway)
-	HMODULE dll = LoadLibrary(KINECTDLL);
-	if (NULL == dll) {
-		return false;
+	if (NULL == kinectDLL) {
+		kinectDLL = LoadLibrary(KINECTDLL);
+		if (NULL == kinectDLL) {
+			return false;
+		}
 	}
-	pNuiCreateSensorByIndexFuncPtr = (NuiCreateSensorByIndexFuncPtr)GetProcAddress(dll, "NuiCreateSensorByIndex");
+	pNuiCreateSensorByIndexFuncPtr = (NuiCreateSensorByIndexFuncPtr)GetProcAddress(kinectDLL, "NuiCreateSensorByIndex");
 	return NULL == pNuiCreateSensorByIndexFuncPtr;
 }
 
@@ -146,14 +160,15 @@ SensorKinectSDK::~SensorKinectSDK() {
 	// not really shutting down
 	m_sensor.reset();
 	return;
-
-	/*
+	/* //TODO: make this work
 	if ( m_sensor )
     {
         m_sensor->NuiShutdown( );
 		m_sensor->Release();
-		m_sensor.reset(NULL);
-    }*/
+		m_sensor.reset();
+    }
+	SensorKinectSDK::Unload();
+	*/
 }
 
 bool SensorKinectSDK::Valid() const {
@@ -409,5 +424,10 @@ bool SensorKinectSDK::ReadFrame()
 
 const std::string& SensorKinectSDK::GetEventData() const {
 	return m_lastFrameData;
+}
+#else
+// KinectSDK is available only on windows
+bool SensorKinectSDK::Available() {
+	return false;
 }
 #endif

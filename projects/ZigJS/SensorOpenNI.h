@@ -28,6 +28,8 @@ public:
 //TODO: inherit from some Sensor interface
 class SensorOpenNI : public Sensor {
 public:
+	static bool Available(); // installed? is there a sensor connected using this API?
+
 	SensorOpenNI();
 	virtual ~SensorOpenNI();
 

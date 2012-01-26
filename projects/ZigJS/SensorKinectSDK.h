@@ -11,7 +11,7 @@ FB_FORWARD_PTR(INuiSensor);
 
 class SensorKinectSDK : public Sensor {
 public:
-	//TODO: API to query availability
+	static bool Available(); // installed? is there a sensor connected using this API?
 	SensorKinectSDK();
 	virtual ~SensorKinectSDK();
 
@@ -22,6 +22,7 @@ public:
 	virtual const std::string& GetEventData() const;
 private:
 	static bool Init();
+	static void Unload();
 	INuiSensorPtr m_sensor;
 
 	bool m_initialized;

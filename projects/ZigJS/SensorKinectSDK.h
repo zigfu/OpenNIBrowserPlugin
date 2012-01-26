@@ -11,6 +11,7 @@ FB_FORWARD_PTR(INuiSensor);
 
 class SensorKinectSDK : public Sensor {
 public:
+	//TODO: API to query availability
 	SensorKinectSDK();
 	virtual ~SensorKinectSDK();
 
@@ -20,6 +21,7 @@ public:
 	virtual boost::shared_ptr< FB::variant > GetImageBase64() const;
 	virtual const std::string& GetEventData() const;
 private:
+	static bool Init();
 	INuiSensorPtr m_sensor;
 
 	bool m_initialized;

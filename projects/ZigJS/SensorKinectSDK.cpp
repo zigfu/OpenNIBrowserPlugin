@@ -91,14 +91,32 @@ static Matrix3f orientationFromYZ(Vector3f vy, Vector3f vz)
 
 
 /////// END OF THAT SHIT
-
+typedef HRESULT (WINAPI *NuiCreateSensorByIndexFuncPtr)( int index, _Out_ INuiSensor ** ppNuiSensor );
+NuiCreateSensorByIndexFuncPtr pNuiCreateSensorByIndexFuncPtr = NULL;
+const TCHAR KINECTDLL[] = TEXT("Kinect10.dll");
+ 
+bool SensorKinectSDK::Init()
+{
+	if (pNuiCreateSensorByIndexFuncPtr) {
+		return true;
+	}
+	// note: we leak refs to the DLL (not that bad - we want to be loaded till the process dies anyway)
+	HMODULE dll = LoadLibrary(KINECTDLL);
+	if (NULL == dll) {
+		return false;
+	}
+	pNuiCreateSensorByIndexFuncPtr = (NuiCreateSensorByIndexFuncPtr)GetProcAddress(dll, "NuiCreateSensorByIndex");
+	return NULL == pNuiCreateSensorByIndexFuncPtr;
+}
 
 SensorKinectSDK::SensorKinectSDK() :
 	m_error(false), m_initialized(false)
 {
+	// try initializing the SDK
+	if (!SensorKinectSDK::Init()) return;
 	// create sensor
 	INuiSensor * pNuiSensor = NULL;
-	HRESULT hr = NuiCreateSensorByIndex(0, &pNuiSensor);
+	HRESULT hr = pNuiCreateSensorByIndexFuncPtr(0, &pNuiSensor);//NuiCreateSensorByIndex(0, &pNuiSensor);
     if ( FAILED(hr) )
     {
 		return;

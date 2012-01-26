@@ -53,7 +53,7 @@ include_directories(SYSTEM
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
 	$ENV{OPEN_NI_LIB}/openNI.lib
-    $ENV{KINECTSDK10_DIR}lib/x86/Kinect10.lib
+#    $ENV{KINECTSDK10_DIR}lib/x86/Kinect10.lib
     )
 
 set(WIX_HEAT_FLAGS

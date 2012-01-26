@@ -54,6 +54,12 @@ target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
 	$ENV{OPEN_NI_LIB}/openNI.lib
 #    $ENV{KINECTSDK10_DIR}lib/x86/Kinect10.lib
+    delayimp.lib # needed for delay-load
+    )
+
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    LINK_FLAGS "/DELAYLOAD:openNI.dll"
     )
 
 set(WIX_HEAT_FLAGS

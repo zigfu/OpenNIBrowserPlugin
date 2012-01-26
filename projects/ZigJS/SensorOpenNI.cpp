@@ -465,7 +465,7 @@ SensorOpenNI::SensorOpenNI() :
 	m_depth(NULL), m_users(NULL), m_device(NULL),
 	m_gestures(NULL), m_hands(NULL)
 {
-	
+	//TODO: refactor this function to reduce error checking boilerplate
 	XnStatus nRetVal = XN_STATUS_OK;
 	nRetVal = xnInit(&m_pContext);
 	if (nRetVal != XN_STATUS_OK) {

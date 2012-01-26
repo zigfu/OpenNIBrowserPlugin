@@ -59,8 +59,9 @@ private:
 	//TODO: refactor these members into "result" object that encapsulates the per-frame data
 	// (it'll make a lot of code make more sense (e.g. memoized getImage thingy)
 	int m_lastFrame;
-	xn::SceneMetaData m_sceneMD;
-	xn::DepthMetaData m_depthMD;
+	XnSceneMetaData *m_pSceneMD;
+	XnDepthMetaData *m_pDepthMD;
+	
 	std::string m_eventData;
 
 	// these are basically a lazily-evaluated and cached variable accessed through GetImageBase64
@@ -69,28 +70,27 @@ private:
 
 	XnUInt64 m_lastNewDataTime;
 private:
-	XN_THREAD_HANDLE m_threadHandle;
-	xn::Context m_context;
-	xn::Device m_device;
-	xn::DepthGenerator m_depth;
-	xn::GestureGenerator m_gestures;
-	xn::HandsGenerator m_hands;
-	xn::UserGenerator m_users;
+	XnContext* m_pContext;
+	XnNodeHandle m_device;
+	XnNodeHandle m_depth;
+	XnNodeHandle m_gestures;
+	XnNodeHandle m_hands;
+	XnNodeHandle m_users;
 	volatile bool m_initialized;
 	volatile bool m_error;
 	XnLicense m_license;
 	
-	static void XN_CALLBACK_TYPE GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
-	static void XN_CALLBACK_TYPE HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
-	static void XN_CALLBACK_TYPE HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
-	static void XN_CALLBACK_TYPE HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie);
+	static void XN_CALLBACK_TYPE GestureRecognizedHandler(XnNodeHandle generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);
+	static void XN_CALLBACK_TYPE HandCreateHandler(XnNodeHandle generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
+	static void XN_CALLBACK_TYPE HandUpdateHandler(XnNodeHandle generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie);
+	static void XN_CALLBACK_TYPE HandDestroyHandler(XnNodeHandle generator, XnUserID user, XnFloat fTime, void* pCookie);
 
 	// User callbacks
-	static void XN_CALLBACK_TYPE OnNewUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnLostUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnPoseDetected(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnCalibrationStart(xn::SkeletonCapability& skeleton, const XnUserID nUserId, void* pCookie);
-	static void XN_CALLBACK_TYPE OnCalibrationEnd(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie);
+	static void XN_CALLBACK_TYPE OnNewUser(XnNodeHandle generator, const XnUserID nUserId, void* pCookie);
+	static void XN_CALLBACK_TYPE OnLostUser(XnNodeHandle generator, const XnUserID nUserId, void* pCookie);
+	static void XN_CALLBACK_TYPE OnPoseDetected(XnNodeHandle poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie);
+	static void XN_CALLBACK_TYPE OnCalibrationStart(XnNodeHandle skeleton, const XnUserID nUserId, void* pCookie);
+	static void XN_CALLBACK_TYPE OnCalibrationEnd(XnNodeHandle skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie);
 
 
 	// implementations - attached to an actual object instance
@@ -103,9 +103,9 @@ private:
 	// User callbacks
 	void OnNewUserImpl(const XnUserID nUserId);
 	void OnLostUserImpl(const XnUserID nUserId);
-	void OnPoseDetectedImpl(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId);
+	void OnPoseDetectedImpl(XnNodeHandle poseDetection, const XnChar* strPose, XnUserID nId);
 	void OnCalibrationStartImpl(const XnUserID nUserId);
-	void OnCalibrationEndImpl(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess);
+	void OnCalibrationEndImpl(XnNodeHandle skeleton, const XnUserID nUserId, XnBool bSuccess);
 
 	static void XN_CALLBACK_TYPE ErrorCallback(XnStatus errorState, void *pCookie);
 	XnCallbackHandle m_errorCB;

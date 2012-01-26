@@ -62,10 +62,10 @@ const unsigned char bitmap_header_vga[] = {
 const unsigned long bmp_header_size = sizeof(bitmap_header_vga); 
 
 
-boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth, const xn::SceneMetaData& users)
+boost::shared_ptr<std::string> bitmap_from_depth(const XnDepthMetaData* depth, const XnSceneMetaData* users)
 {
-	unsigned long totalLength = bmp_header_size + (depth.XRes() * depth.YRes() * 3);
-	bool VGA = depth.XRes() == 640;
+	unsigned long totalLength = bmp_header_size + (depth->pMap->Res.X * depth->pMap->Res.Y * 3);
+	bool VGA = depth->pMap->Res.X == 640;
 
 	unsigned char * outputBuffer = new unsigned char[totalLength];
 	unsigned char * out = outputBuffer;
@@ -83,14 +83,14 @@ boost::shared_ptr<std::string> bitmap_from_depth(const xn::DepthMetaData& depth,
 
 	// simple copy loop - bitmap has its rows upside down, so we have to invert the rows
 	// invert rows copy loop
-	for(long y = depth.YRes() - 1; y >= 0 ; y--) {
+	for(long y = depth->pMap->Res.Y - 1; y >= 0 ; y--) {
 
-		const XnDepthPixel * in = depth.Data() + depth.XRes()*y;
+		const XnDepthPixel * in = depth->pData + depth->pMap->Res.X*y;
 		// assume labelmap is the same resolution as the depth map
-		const XnLabel * inUsers = users.Data() + users.XRes()*y;
+		const XnLabel * inUsers = users->pData + users->pMap->Res.X*y;
 
 		for(long x = 0;
-			x < depth.XRes();
+			x < depth->pMap->Res.X;
 			++x, out += 3, ++in, ++inUsers) {
 				XnDepthPixel pix = *in;
 				out[0] = (unsigned char)(*inUsers); // assuming we'll never pass 256 in the label
@@ -137,14 +137,14 @@ FB::VariantList SensorOpenNI::GetJointsList(XnUserID userid)
 	XnSkeletonJointTransformation jointData;
 
 	// quick out if not tracking
-	if (!m_users.GetSkeletonCap().IsTracking(userid)) {
+	if (!xnIsSkeletonTracking(m_users, userid)) {
 		return result;
 	}
 
 	// head is the first, right foot the last. probably not the best way.
 	for (int i=XN_SKEL_HEAD; i<= XN_SKEL_RIGHT_FOOT; i++) {
-		if (m_users.GetSkeletonCap().IsJointAvailable((XnSkeletonJoint)i)) {
-			m_users.GetSkeletonCap().GetSkeletonJoint(userid, (XnSkeletonJoint)i, jointData);
+		if (xnIsJointAvailable(m_users, (XnSkeletonJoint)i)) {
+			xnGetSkeletonJoint(m_users, userid, (XnSkeletonJoint)i, &jointData);
 			FB::VariantMap joint;
 			joint["id"] = i;
 			joint["position"] = PositionToVariant(jointData.position.position);
@@ -163,15 +163,15 @@ FB::VariantList SensorOpenNI::MakeUsersList()
 	// get the users
 	XnUInt16 nUsers = MAX_USERS;
 	XnUserID aUsers[MAX_USERS];
-	m_users.GetUsers(aUsers, nUsers);
+	xnGetUsers(m_users, aUsers, &nUsers);
 
 	// construct JS object
 	FB::VariantList jsUsers;
 	XnPoint3D pos;
 	for (int i = 0; i < nUsers; i++) {
-		m_users.GetCoM(aUsers[i], pos);
+		xnGetUserCoM(m_users, aUsers[i], &pos);
 		FB::VariantMap user;
-		user["tracked"] = m_users.GetSkeletonCap().IsTracking(aUsers[i]);
+		user["tracked"] = xnIsSkeletonTracking(m_users, aUsers[i]);
 		user["centerofmass"] = PositionToVariant(pos);
 		user["id"] = aUsers[i];
 		user["joints"] = GetJointsList(aUsers[i]);
@@ -227,25 +227,25 @@ Json::Value SensorOpenNI::OrientationToValue(XnMatrix3X3 ori)
 Json::Value SensorOpenNI::GetJointsJsonList(XnUserID userid)
 {
 	Json::Value result(Json::arrayValue);
-	XnSkeletonJointTransformation jointData;
 
 	// quick out if not tracking
-	if (!m_users.GetSkeletonCap().IsTracking(userid)) {
+	if (!xnIsSkeletonTracking(m_users, userid)) {
 		return result;
 	}
 
 	int jointCount = 0;
 	for (int i=XN_SKEL_HEAD; i<= XN_SKEL_RIGHT_FOOT; i++) {
-		if (m_users.GetSkeletonCap().IsJointAvailable((XnSkeletonJoint)i)) {
+		if (xnIsJointAvailable(m_users, (XnSkeletonJoint)i)) {
 			jointCount++;
 		}
 	}
 	result.resize(jointCount);
+	XnSkeletonJointTransformation jointData;
 	int position = 0;
 	// head is the first, right foot the last. probably not the best way.
 	for (int i=XN_SKEL_HEAD; i<= XN_SKEL_RIGHT_FOOT; i++) {
-		if (m_users.GetSkeletonCap().IsJointAvailable((XnSkeletonJoint)i)) {
-			m_users.GetSkeletonCap().GetSkeletonJoint(userid, (XnSkeletonJoint)i, jointData);
+		if (xnIsJointAvailable(m_users, (XnSkeletonJoint)i)) {
+			xnGetSkeletonJoint(m_users, userid, (XnSkeletonJoint)i, &jointData);
 			Json::Value joint(Json::objectValue);
 			joint["id"] = i;
 			joint["position"] = PositionToValue(jointData.position.position);
@@ -265,16 +265,16 @@ Json::Value SensorOpenNI::MakeUsersJsonList()
 	// get the users
 	XnUInt16 nUsers = MAX_USERS;
 	XnUserID aUsers[MAX_USERS];
-	m_users.GetUsers(aUsers, nUsers);
+	xnGetUsers(m_users, aUsers, &nUsers);
 
 	// construct JS object
 	Json::Value jsUsers(Json::arrayValue);
 	jsUsers.resize(nUsers);
 	XnPoint3D pos;
 	for (int i = 0; i < nUsers; i++) {
-		m_users.GetCoM(aUsers[i], pos);
+		xnGetUserCoM(m_users, aUsers[i], &pos);
 		Json::Value user(Json::objectValue);
-		user["tracked"] = m_users.GetSkeletonCap().IsTracking(aUsers[i]);
+		user["tracked"] = xnIsSkeletonTracking(m_users, aUsers[i]);
 		user["centerofmass"] = PositionToValue(pos);
 		user["id"] = aUsers[i];
 		user["joints"] = GetJointsJsonList(aUsers[i]);
@@ -305,13 +305,12 @@ Json::Value SensorOpenNI::MakeHandsJsonList()
 XnUserID SensorOpenNI::WhichUserDoesThisPointBelongTo(XnPoint3D point)
 {
 	XnPoint3D proj;
-	m_depth.ConvertRealWorldToProjective(1, &point, &proj);
-	xn::SceneMetaData smd;
-	m_users.GetUserPixels(0, smd);
-	return smd((XnUInt32)proj.X, (XnUInt32)proj.Y);
+	xnConvertRealWorldToProjective(m_depth, 1, &point, &proj);
+	xnGetUserPixels(m_users, 0, m_pSceneMD);
+	return m_pSceneMD->pData[(XnUInt32)proj.X + (XnUInt32)proj.Y * m_pSceneMD->pMap->Res.X];
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::GestureRecognizedHandler(xn::GestureGenerator& generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::GestureRecognizedHandler(XnNodeHandle generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -320,10 +319,10 @@ void XN_CALLBACK_TYPE SensorOpenNI::GestureRecognizedHandler(xn::GestureGenerato
 }
 void SensorOpenNI::GestureRecognizedHandlerImpl(const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition)
 {
-	m_hands.StartTracking(*pEndPosition);
+	xnStartTracking(m_hands, pEndPosition);
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::HandCreateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::HandCreateHandler(XnNodeHandle generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -335,7 +334,7 @@ void SensorOpenNI::HandCreateHandlerImpl(XnUserID user, const XnPoint3D* pPositi
 	m_handpoints.push_back(HandPoint(user, WhichUserDoesThisPointBelongTo(*pPosition), *pPosition, *pPosition));
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::HandUpdateHandler(xn::HandsGenerator& generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::HandUpdateHandler(XnNodeHandle generator, XnUserID user, const XnPoint3D* pPosition, XnFloat fTime, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -358,7 +357,7 @@ void SensorOpenNI::HandUpdateHandlerImpl(XnUserID user, const XnPoint3D* pPositi
 
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::HandDestroyHandler(xn::HandsGenerator& generator, XnUserID user, XnFloat fTime, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::HandDestroyHandler(XnNodeHandle generator, XnUserID user, XnFloat fTime, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -377,7 +376,7 @@ void SensorOpenNI::HandDestroyHandlerImpl(XnUserID user, XnFloat fTime)
 	}
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::OnNewUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::OnNewUser(XnNodeHandle generator, const XnUserID nUserId, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -386,15 +385,15 @@ void XN_CALLBACK_TYPE SensorOpenNI::OnNewUser(xn::UserGenerator& generator, cons
 }
 void SensorOpenNI::OnNewUserImpl(const XnUserID nUserId)
 {
-	if (m_users.GetSkeletonCap().NeedPoseForCalibration()) {
+	if (xnNeedPoseForSkeletonCalibration(m_users)) {
 		//std::string
-		m_users.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
+		xnStartPoseDetection(m_users, "Psi", nUserId);
 	} else {
-		m_users.GetSkeletonCap().StartTracking(nUserId);
+		xnStartSkeletonTracking(m_users, nUserId);
 	}
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::OnLostUser(xn::UserGenerator& generator, const XnUserID nUserId, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::OnLostUser(XnNodeHandle generator, const XnUserID nUserId, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -406,23 +405,23 @@ void SensorOpenNI::OnLostUserImpl(const XnUserID nUserId)
 }
 
 
-void XN_CALLBACK_TYPE SensorOpenNI::OnPoseDetected(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::OnPoseDetected(XnNodeHandle poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
 		instance->OnPoseDetectedImpl(poseDetection, strPose, nId);
 	}
 }
-void SensorOpenNI::OnPoseDetectedImpl(xn::PoseDetectionCapability& poseDetection, const XnChar* strPose, XnUserID nId)
+void SensorOpenNI::OnPoseDetectedImpl(XnNodeHandle poseDetection, const XnChar* strPose, XnUserID nId)
 {
 	// Stop detecting the pose
-	poseDetection.StopPoseDetection(nId);
+	xnStopPoseDetection(poseDetection, nId);
 
 	// Start calibrating
-	m_users.GetSkeletonCap().RequestCalibration(nId, TRUE);
+	xnRequestSkeletonCalibration(m_users, nId, TRUE);
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::OnCalibrationStart(xn::SkeletonCapability& skeleton, const XnUserID nUserId, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::OnCalibrationStart(XnNodeHandle skeleton, const XnUserID nUserId, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
@@ -433,22 +432,22 @@ void SensorOpenNI::OnCalibrationStartImpl(const XnUserID nUserId)
 {
 }
 
-void XN_CALLBACK_TYPE SensorOpenNI::OnCalibrationEnd(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie)
+void XN_CALLBACK_TYPE SensorOpenNI::OnCalibrationEnd(XnNodeHandle skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie)
 {
 	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
 	if (instance) {
 		instance->OnCalibrationEndImpl(skeleton, nUserId, bSuccess);
 	}
 }
-void SensorOpenNI::OnCalibrationEndImpl(xn::SkeletonCapability& skeleton, const XnUserID nUserId, XnBool bSuccess)
+void SensorOpenNI::OnCalibrationEndImpl(XnNodeHandle skeleton, const XnUserID nUserId, XnBool bSuccess)
 {
 	// If this was a successful calibration
 	if (bSuccess) {
 		// start tracking
-		skeleton.StartTracking(nUserId);
+		xnStartSkeletonTracking(skeleton, nUserId);
 	} else {
 		// Restart pose detection
-		m_users.GetPoseDetectionCap().StartPoseDetection("Psi", nUserId);
+		xnStartPoseDetection(m_users, "Psi", nUserId);
 	}	
 }
 void XN_CALLBACK_TYPE SensorOpenNI::ErrorCallback(XnStatus errorState, void *pCookie) {
@@ -460,134 +459,172 @@ void XN_CALLBACK_TYPE SensorOpenNI::ErrorCallback(XnStatus errorState, void *pCo
 
 SensorOpenNI::SensorOpenNI() : 
 	m_initialized(false), m_error(false),
-	m_lastNewDataTime(0xFFFFFFFFFFFFFFFFULL)
+	m_lastNewDataTime(0xFFFFFFFFFFFFFFFFULL),
+	m_pContext(NULL),
+	m_pSceneMD(NULL), m_pDepthMD(NULL),
+	m_depth(NULL), m_users(NULL), m_device(NULL),
+	m_gestures(NULL), m_hands(NULL)
 {
 	
-	// Place one-time initialization stuff here; As of FireBreath 1.4 this should only
-    // be called once per process
 	XnStatus nRetVal = XN_STATUS_OK;
-	nRetVal = m_context.Init();
+	nRetVal = xnInit(&m_pContext);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail context init");
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok context init");
 	}
-	nRetVal = m_context.RegisterToErrorStateChange(&SensorOpenNI::ErrorCallback, this, m_errorCB);
+	
+	nRetVal = xnRegisterToGlobalErrorStateChange(m_pContext, &SensorOpenNI::ErrorCallback, this, &m_errorCB);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail register for error callback");
-		m_context.Release();
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok register for error callback");
 	}
-
+	m_pSceneMD = xnAllocateSceneMetaData();
+	m_pDepthMD = xnAllocateDepthMetaData();
 	xnOSStrCopy(m_license.strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(m_license.strKey));
 	xnOSStrCopy(m_license.strVendor, "PrimeSense", sizeof(m_license.strVendor));
-	m_context.AddLicense(m_license);
-	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_DEVICE, NULL, m_device);
-	if (nRetVal != XN_STATUS_OK) {
-		m_lastFrame = -6;
-		return;
-	}
+	xnAddLicense(m_pContext, &m_license);
 
-	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_DEPTH, NULL, m_depth);
+	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_DEVICE, NULL, &m_device, NULL);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail get device");
+		m_lastFrame = -6;
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
+		return;
+	} else {
+		FBLOG_DEBUG("xnInit", "ok get device");
+	}
+	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_DEPTH, NULL, &m_depth, NULL);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get depth");
 		m_lastFrame = -6;
-		m_context.Release();
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
 		return;
 	} else {
 		FBLOG_DEBUG("xnInit", "ok get depth");
 	}
 	
-	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_GESTURE, NULL, m_gestures);
+	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_GESTURE, NULL, &m_gestures, NULL);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get gesture");
 		m_lastFrame = -6;
-		m_context.Release();
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok get gesture");
 	}
 	
-	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_HANDS, NULL, m_hands);
+	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_HANDS, NULL, &m_hands, NULL);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail get hands");
 		m_lastFrame = -6;
-		m_context.Release();
+		xnContextRelease(m_pContext);
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok get hands");
 	}
 
-	nRetVal = m_context.CreateAnyProductionTree(XN_NODE_TYPE_USER, NULL, m_users);
+	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_USER, NULL, &m_users, NULL);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_DEBUG("xnInit", "fail create production tree");
 		m_lastFrame = -6;
-		m_context.Release();
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok create production tree");
 	}
 
 	// make sure global mirror is on
-	m_context.SetGlobalMirror(true);
+	xnSetGlobalMirror(m_pContext, true);
 
 	XnCallbackHandle ignore;
 	// register to gesture/hands callbacks
-	m_gestures.RegisterGestureCallbacks(&SensorOpenNI::GestureRecognizedHandler, NULL, this, ignore);
-	m_hands.RegisterHandCallbacks(&SensorOpenNI::HandCreateHandler, 
+	xnRegisterGestureCallbacks(m_gestures, &SensorOpenNI::GestureRecognizedHandler, NULL, this, &ignore);
+	xnRegisterHandCallbacks(m_hands, &SensorOpenNI::HandCreateHandler, 
 								  &SensorOpenNI::HandUpdateHandler, 
 								  &SensorOpenNI::HandDestroyHandler,
-								  this, ignore);
+								  this, &ignore);
 
-	m_users.RegisterUserCallbacks(&SensorOpenNI::OnNewUser, 
+	xnRegisterUserCallbacks(m_users, &SensorOpenNI::OnNewUser, 
 								  &SensorOpenNI::OnLostUser, 
-								  this, ignore);
-	m_users.GetSkeletonCap().SetSkeletonProfile(XN_SKEL_PROFILE_ALL);
-	m_users.GetSkeletonCap().RegisterCalibrationCallbacks(&SensorOpenNI::OnCalibrationStart,
+								  this, &ignore);
+	xnSetSkeletonProfile(m_users, XN_SKEL_PROFILE_ALL);
+	xnRegisterCalibrationCallbacks(m_users, &SensorOpenNI::OnCalibrationStart,
 														  &SensorOpenNI::OnCalibrationEnd,
-														  this, ignore);
-	m_users.GetSkeletonCap().SetSmoothing(0.5);
-	m_users.GetPoseDetectionCap().RegisterToPoseCallbacks(&SensorOpenNI::OnPoseDetected, NULL, this, ignore);
+														  this, &ignore);
+	xnSetSkeletonSmoothing(m_users, 0.5);
+	xnRegisterToPoseCallbacks(m_users, &SensorOpenNI::OnPoseDetected, NULL, this, &ignore);
 
-	m_gestures.AddGesture ("Wave",  NULL); //no bounding box
-	m_gestures.AddGesture ("Click",  NULL); //no bounding box
+	xnAddGesture (m_gestures, "Wave",  NULL); //no bounding box
+	xnAddGesture (m_gestures, "Click",  NULL); //no bounding box
 
-	nRetVal = m_context.StartGeneratingAll();
+	nRetVal = xnStartGeneratingAll(m_pContext);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail start generating");
 		m_lastFrame = -1;
-		m_context.Release();
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok start generating");
 	}
-	nRetVal = m_context.WaitAndUpdateAll(); // do a single real read
+	nRetVal = xnWaitAndUpdateAll(m_pContext); // do a single real read
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("xnInit", "fail read frame");
 		m_lastFrame = -1;
-		m_context.Release();
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
 		return;
 	} else {
 		FBLOG_INFO("xnInit", "ok read frame");
 	}
+
 	m_initialized = true;
 }
 
-SensorOpenNI::~SensorOpenNI() {
-	//XnStatus nRetVal = xnOSWaitForThreadExit(&s_threadHandle, -1); // wait till quit
- //   XnStatus nRetVal = xnOSWaitForThreadExit(s_threadHandle, -1); // wait till quit
-	//if (XN_STATUS_OK != nRetVal) {
-	//	FBLOG_DEBUG("deinit", "failed waiting on thread to quit");
-	//	return;
-	//}
-	m_hands.Release();
-	m_gestures.Release();
-	m_depth.Release();
-	m_device.Release();
-	m_context.Release();
+SensorOpenNI::~SensorOpenNI()
+{
+	if (NULL != m_pSceneMD) {
+		xnFreeSceneMetaData(m_pSceneMD);
+		m_pSceneMD = NULL;
+	}
+	if (NULL != m_pDepthMD) {
+		xnFreeDepthMetaData(m_pDepthMD);
+		m_pDepthMD = NULL;
+	}
+	if (NULL != m_hands) { 
+		xnProductionNodeRelease(m_hands);
+		m_hands = NULL;
+	}
+	if (NULL != m_users) { 
+		xnProductionNodeRelease(m_users);
+		m_hands = NULL;
+	}
+	if (NULL != m_gestures) { 
+		xnProductionNodeRelease(m_gestures);
+		m_gestures = NULL;
+	}
+	if (NULL != m_depth) { 
+		xnProductionNodeRelease(m_depth);
+		m_depth = NULL;
+	}
+	if (NULL != m_device) { 
+		xnProductionNodeRelease(m_device);
+		m_device = NULL;
+	}
+	if (NULL != m_pContext) {
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
+	}
 }
 bool SensorOpenNI::Valid() const {
 	return m_initialized && (!m_error);
@@ -600,16 +637,15 @@ bool SensorOpenNI::ReadFrame() {
 	if (!Valid()) return false;
 	m_gotImage = false;
 
-	XnStatus nRetVal = m_context.WaitNoneUpdateAll();
+	XnStatus nRetVal = xnWaitNoneUpdateAll(m_pContext);
 	if (nRetVal != XN_STATUS_OK) {
 		FBLOG_INFO("ReadFrame", "fail wait & update");
 		m_initialized = false; // can't read no depth no more
 		return false; //TODO: throw exception (so we know to create a new reader thingy)
 	}
+	xnGetDepthMetaData(m_depth, m_pDepthMD);
 
-	m_depth.GetMetaData(m_depthMD);
-
-	if (m_lastFrame == (int)m_depthMD.FrameID()) {
+	if (m_lastFrame == (int)m_pDepthMD->pMap->pOutput->nFrameID) {
 		if (m_lastNewDataTime == 0xFFFFFFFFFFFFFFFFULL) {
 			xnOSGetTimeStamp(&m_lastNewDataTime);
 		}
@@ -622,10 +658,10 @@ bool SensorOpenNI::ReadFrame() {
 		return false; // not a new frame, do nothing
 	}
 	
-	m_lastFrame = (int)m_depthMD.FrameID();
+	m_lastFrame = (int)m_pDepthMD->pMap->pOutput->nFrameID;
 	xnOSGetTimeStamp(&m_lastNewDataTime);
 	//m_lastNewDataTime = m_depthMD.Timestamp();
-	m_users.GetUserPixels(0, m_sceneMD);
+	xnGetUserPixels(m_users, 0, m_pSceneMD);
 
 	Json::Value pluginData;
 	pluginData["hands"] = MakeHandsJsonList();
@@ -638,7 +674,7 @@ bool SensorOpenNI::ReadFrame() {
 boost::shared_ptr< FB::variant > SensorOpenNI::GetImageBase64() const {
 	if (!Valid()) return boost::shared_ptr< FB::variant >();
 	if (!m_gotImage) {
-		m_imageData = boost::make_shared< FB::variant >(*bitmap_from_depth(m_depthMD, m_sceneMD));
+		m_imageData = boost::make_shared< FB::variant >(*bitmap_from_depth(m_pDepthMD, m_pSceneMD));
 		m_gotImage = true;
 	}
 	return m_imageData;

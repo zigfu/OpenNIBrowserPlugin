@@ -94,15 +94,25 @@ static Matrix3f orientationFromYZ(Vector3f vy, Vector3f vz)
 typedef HRESULT (WINAPI *NuiCreateSensorByIndexFuncPtr)( int index, _Out_ INuiSensor ** ppNuiSensor );
 NuiCreateSensorByIndexFuncPtr pNuiCreateSensorByIndexFuncPtr = NULL;
 const TCHAR KINECTDLL[] = TEXT("Kinect10.dll");
+typedef HRESULT (WINAPI * NuiGetSensorCountFuncPtr)( int *pCount );
+NuiGetSensorCountFuncPtr pNuiGetSensorCount = NULL;
  
+
 bool SensorKinectSDK::Available() {
-	return Init();
+	if (!Init()) return false;
+	int sensorCount = 0;
+	HRESULT hr = pNuiGetSensorCount(&sensorCount);
+	if (FAILED(hr)) {
+		return false;
+	}
+	return sensorCount > 0;
 }
 
 static HMODULE kinectDLL = NULL;
-static void SensorKinectSDK::Unload() {
+void SensorKinectSDK::Unload() {
 	if (NULL != kinectDLL) {
 		pNuiCreateSensorByIndexFuncPtr = NULL;
+		pNuiGetSensorCount = NULL;
 		FreeLibrary(kinectDLL);
 		kinectDLL = NULL;
 	}
@@ -119,6 +129,10 @@ bool SensorKinectSDK::Init()
 			return false;
 		}
 	}
+	pNuiGetSensorCount = (NuiGetSensorCountFuncPtr)GetProcAddress(kinectDLL, "NuiGetSensorCount");
+	if (NULL == pNuiGetSensorCount) {
+		return false;
+	}
 	pNuiCreateSensorByIndexFuncPtr = (NuiCreateSensorByIndexFuncPtr)GetProcAddress(kinectDLL, "NuiCreateSensorByIndex");
 	return NULL == pNuiCreateSensorByIndexFuncPtr;
 }
@@ -128,6 +142,7 @@ SensorKinectSDK::SensorKinectSDK() :
 {
 	// try initializing the SDK
 	if (!SensorKinectSDK::Init()) return;
+	if (!SensorKinectSDK::Available()) return; // if no sensor connected fail silently
 	// create sensor
 	INuiSensor * pNuiSensor = NULL;
 	HRESULT hr = pNuiCreateSensorByIndexFuncPtr(0, &pNuiSensor);//NuiCreateSensorByIndex(0, &pNuiSensor);

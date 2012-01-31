@@ -412,8 +412,8 @@ void FB::JSAPIAuto::setAttribute( const std::string& name, const FB::variant& va
 {
     AttributeMap::iterator fnd = m_attributes.find(name);
     if (fnd != m_attributes.end() || !fnd->second.readonly) {
-        Attribute attr = {value, false};
-        m_attributes[name] = attr;
+        //m_attributes[name].value.assign(value);
+		fnd->second.value.assign(value);
         m_zoneMap[name] = getZone();
     } else {
         throw FB::script_error("Cannot set read-only property " + name);

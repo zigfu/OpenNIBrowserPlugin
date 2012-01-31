@@ -28,6 +28,9 @@ private:
 
 	bool m_initialized;
 	bool m_error;
+	//TODO: these are both HANDLEs
+	void* m_image;
+	void* m_depth;
 
 	std::string m_lastFrameData;
 	Json::FastWriter m_writer;

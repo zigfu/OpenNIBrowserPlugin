@@ -16,6 +16,12 @@ using namespace boost::assign;
 //TODO: get rid of this - it's only used for joint id conversion
 #include <XnOpenNI.h>
 
+const int DEPTH_MAP_WIDTH = 320;
+const int DEPTH_MAP_HEIGHT = 240;
+const int IMAGE_MAP_WIDTH = 640;
+const int IMAGE_MAP_HEIGHT = 480;
+
+
 /////////// VECTOR MATH
 //-----------------------------------------------------------------------------
 // Private
@@ -153,7 +159,7 @@ SensorKinectSDK::SensorKinectSDK() :
 	m_sensor.reset(pNuiSensor);
 
 	// init it to use depth, skeleton
-	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON;
+	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR;
 	hr = m_sensor->NuiInitialize( nuiFlags );
 	if ( FAILED( hr ) )
 	{
@@ -166,7 +172,18 @@ SensorKinectSDK::SensorKinectSDK() :
 	{
 		return;
 	}
+	// open depth and image streams
+	hr = m_sensor->NuiImageStreamOpen(NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX, NUI_IMAGE_RESOLUTION_320x240, 0, 2, NULL, &m_depth);
+    if( FAILED( hr ) ) 
+	{
+		return;
+	}
 
+	hr = m_sensor->NuiImageStreamOpen(NUI_IMAGE_TYPE_COLOR, NUI_IMAGE_RESOLUTION_640x480, 0, 2, NULL, &m_image);
+    if( FAILED( hr ) ) 
+	{
+		return;
+	}
 	m_initialized = true;
 }
 
@@ -395,6 +412,100 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 			return false;
 		}
 	}
+
+	// get image/depth if available/needed
+	if (updateDepth) {
+		int xRatio = DEPTH_MAP_WIDTH / MAP_XRES; // assume there's never going to up upscaling
+		int yRatio = DEPTH_MAP_HEIGHT / MAP_YRES;
+
+		NUI_IMAGE_FRAME frame;
+		HRESULT hr = m_sensor->NuiImageStreamGetNextFrame(m_depth, 0, &frame);
+		if ( FAILED(hr) ) {
+			return false; //TODO: test out that this doesn't just happen and cause us to drop frames
+		}
+		NUI_LOCKED_RECT rect;
+		hr = frame.pFrameTexture->LockRect(0, &rect, NULL, 0);
+		if ( FAILED(hr) ) {
+			return false;
+		}
+		unsigned short * pixels = (unsigned short *)rect.pBits;
+		if (isWebplayer) {
+			// for webplayer, increment every pixel by 1 to solve null-termination problem
+			for(int y = 0; y < MAP_YRES; y++) {
+				// get start-of-line read pointer
+				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
+				for(int x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
+					unsigned short pixel = (*p) >> 3;
+					m_depthBuffer[x + y*MAP_XRES*2] = (pixel) | 1; // set LSB on least-significant byte
+					m_depthBuffer[x + 1 + y*MAP_XRES*2] = ((pixel) >> 8) | (1<<7); // MSB on most-significant
+				}
+			}
+		} else {
+			for(int y = 0; y < MAP_YRES; y++) {
+				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
+				for(int x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
+					unsigned short pixel = (*p) >> 3;
+					m_depthBuffer[x + y*MAP_XRES*2] = pixel;
+					m_depthBuffer[x + 1 + y*MAP_XRES*2] = pixel >> 8;
+				}
+			}
+		}
+		frame.pFrameTexture->UnlockRect(0); // TODO: check result?
+		m_sensor->NuiImageStreamReleaseFrame(m_depth, &frame);
+
+		m_depthJS.assign(FB::make_variant(m_depthBuffer));
+	} // if (updateDepth)
+
+	if (updateImage) {
+		int xRatio = IMAGE_MAP_WIDTH / MAP_XRES; // assume there's never going to up upscaling
+		int yRatio = IMAGE_MAP_HEIGHT / MAP_YRES;
+
+		NUI_IMAGE_FRAME frame;
+		HRESULT hr = m_sensor->NuiImageStreamGetNextFrame(m_image, 0, &frame);
+		if ( FAILED(hr) ) {
+			return false; //TODO: test out that this doesn't just happen and cause us to drop frames
+		}
+		NUI_LOCKED_RECT rect;
+		hr = frame.pFrameTexture->LockRect(0, &rect, NULL, 0);
+		if ( FAILED(hr) ) {
+			return false;
+		}
+		// right now it's assuming RGBX (kinectSDK)
+		if (isWebplayer) {
+			// for webplayer, increment every pixel by 1 to solve null-termination problem
+			for(int y = 0; y < MAP_YRES; y++) {
+				// get start-of-line read pointer
+				const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
+				for(int x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*4) {
+					unsigned char r = p[0];
+					unsigned char g = p[1];
+					unsigned char b = p[2];
+					m_imageBuffer[x + y*MAP_XRES*3] = (char) (r | 1);
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) (g | 1);
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) (b | 1);
+				}
+			}
+		} else {
+			// for webplayer, increment every pixel by 1 to solve null-termination problem
+			for(int y = 0; y < MAP_YRES; y++) {
+				// get start-of-line read pointer
+				const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
+				for(int x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*4) {
+					unsigned char r = p[0];
+					unsigned char g = p[1];
+					unsigned char b = p[2];
+					m_imageBuffer[x + y*MAP_XRES*3] = (char) (r | 1);
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) (g | 1);
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) (b | 1);
+				}
+			}
+		}
+		frame.pFrameTexture->UnlockRect(0); // TODO: check result?
+		m_sensor->NuiImageStreamReleaseFrame(m_image, &frame);
+		//m_imageJS.reset(); //needed to stop memory leak
+		m_imageJS.assign(FB::make_variant(m_imageBuffer));
+	}// if (updateImage)
+
 
 	Json::Value jsUsers(Json::arrayValue);
 	// now parse skeletonFrame - it has data

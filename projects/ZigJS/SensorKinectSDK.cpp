@@ -190,10 +190,10 @@ bool SensorKinectSDK::Valid() const {
 	return m_initialized && (!m_error);
 }
 
-boost::shared_ptr< FB::variant > SensorKinectSDK::GetImageBase64() const
-{
-	return boost::make_shared< FB::variant >();
-}
+//boost::shared_ptr< FB::variant > SensorKinectSDK::GetImageBase64() const
+//{
+//	return boost::make_shared< FB::variant >();
+//}
 
 static bool getOrientation(NUI_SKELETON_DATA * skeleton, int joint, float  orientation[9])
 {
@@ -375,7 +375,7 @@ int KinectToZigId(int joint)
 }
 
 
-bool SensorKinectSDK::ReadFrame()
+bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer)
 {
 	if (!Valid()) return false;
 	HRESULT read;
@@ -440,9 +440,5 @@ bool SensorKinectSDK::ReadFrame()
 const std::string& SensorKinectSDK::GetEventData() const {
 	return m_lastFrameData;
 }
-#else
-// KinectSDK is available only on windows
-bool SensorKinectSDK::Available() {
-	return false;
-}
+
 #endif

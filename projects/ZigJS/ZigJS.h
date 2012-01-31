@@ -35,7 +35,12 @@ private:
 	static SensorPtr InitSensor(); // TODO: point to some factory function?
 
 	static FB::TimerPtr s_timer;
+
+	static bool s_getDepth;
+	static bool s_getImage;
+	static bool s_isWebplayer;
 public:
+	static void SetStreams(bool getDepth, bool getImage, bool isWebplayer);
 
     static void StaticInitialize();
     static void StaticDeinitialize();

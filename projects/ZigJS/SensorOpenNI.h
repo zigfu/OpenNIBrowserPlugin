@@ -33,10 +33,10 @@ public:
 	SensorOpenNI();
 	virtual ~SensorOpenNI();
 
-	bool ReadFrame(); //true if there is new data, false otherwise
+	bool ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer); //true if there is new data, false otherwise
 
 	bool Valid() const;
-	boost::shared_ptr< FB::variant > GetImageBase64() const;
+	//boost::shared_ptr< FB::variant > GetImageBase64() const;
 	const std::string& GetEventData() const;
 private:
 	FB::VariantList GetJointsList(XnUserID userid);
@@ -63,12 +63,13 @@ private:
 	int m_lastFrame;
 	XnSceneMetaData *m_pSceneMD;
 	XnDepthMetaData *m_pDepthMD;
+	XnImageMetaData *m_pImageMD;
 	
 	std::string m_eventData;
 
 	// these are basically a lazily-evaluated and cached variable accessed through GetImageBase64
-	mutable bool m_gotImage;
-	mutable boost::shared_ptr< FB::variant > m_imageData;
+	//mutable bool m_gotImage;
+	//mutable boost::shared_ptr< FB::variant > m_imageData;
 
 	XnUInt64 m_lastNewDataTime;
 private:
@@ -78,6 +79,7 @@ private:
 	XnNodeHandle m_gestures;
 	XnNodeHandle m_hands;
 	XnNodeHandle m_users;
+	XnNodeHandle m_image;
 	volatile bool m_initialized;
 	volatile bool m_error;
 	XnLicense m_license;

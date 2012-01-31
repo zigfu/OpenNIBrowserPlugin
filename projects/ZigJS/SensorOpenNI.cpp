@@ -6,102 +6,102 @@
 using namespace boost::assign;
 
 // TODO: MOVE OUT OF HERE
-static const char* base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-
-boost::shared_ptr<std::string> base64_encode(const char * dp, unsigned int size)
-{
-  boost::shared_ptr<std::string> output = boost::make_shared<std::string>("data:image/bmp;base64,");
-  std::string& outdata = *output;
-  outdata.reserve((outdata.size()) + ((size * 8) / 6) + 2);
-  std::string::size_type remaining = size;
-
-  while (remaining >= 3) {
-    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
-    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
-    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)]);
-    outdata.push_back(base64_charset[(dp[2] & 0x3f)]);
-    remaining -= 3; dp += 3;
-  }
-  
-  if (remaining == 2) {
-    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
-    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
-    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2)]);
-    outdata.push_back(base64_charset[64]);
-  } else if (remaining == 1) {
-    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
-    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4)]); 
-    outdata.push_back(base64_charset[64]);
-    outdata.push_back(base64_charset[64]);
-  }
-
-  return output;
-}
-
-
-// instead of understanding the format, we'll just replace the data from existing valid BMPs
-// ugly as hell, but will work just fine
-const unsigned char bitmap_header_qvga[] = {
-							 0x42, 0x4D, 0x36, 0x84, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 
-							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x40, 0x01, 
-							 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
-							 0x00, 0x00, 0x00, 0x00, 0x00, 0x84, 0x03, 0x00, 0x00, 0x00, 
-							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-							 0x00, 0x00, 0x00, 0x00
-							 };
-
-const unsigned char bitmap_header_vga[] = {
-							 0x42, 0x4D, 0x36, 0x10, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 
-							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x80, 0x02, 
-							 0x00, 0x00, 0xE0, 0x01, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
-							 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00, 0x00, 0x00, 
-							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-							 0x00, 0x00, 0x00, 0x00
-							 };
-// hack - bitmap headers are both the same length...
-const unsigned long bmp_header_size = sizeof(bitmap_header_vga); 
-
-
-boost::shared_ptr<std::string> bitmap_from_depth(const XnDepthMetaData* depth, const XnSceneMetaData* users)
-{
-	unsigned long totalLength = bmp_header_size + (depth->pMap->Res.X * depth->pMap->Res.Y * 3);
-	bool VGA = depth->pMap->Res.X == 640;
-
-	unsigned char * outputBuffer = new unsigned char[totalLength];
-	unsigned char * out = outputBuffer;
-	// TODO: Code is ugly, I don't care much
-	if (VGA) {
-		memcpy(outputBuffer, bitmap_header_vga, sizeof(bitmap_header_vga));
-		out += sizeof(bitmap_header_vga);
-	} else {
-		memcpy(outputBuffer, bitmap_header_qvga, sizeof(bitmap_header_qvga));
-		out += sizeof(bitmap_header_qvga);
-	}
-
-	// TODO: unused?
-	//const XnDepthPixel maxDepth = SensorOpenNI::m_depth.GetDeviceMaxDepth();
-
-	// simple copy loop - bitmap has its rows upside down, so we have to invert the rows
-	// invert rows copy loop
-	for(long y = depth->pMap->Res.Y - 1; y >= 0 ; y--) {
-
-		const XnDepthPixel * in = depth->pData + depth->pMap->Res.X*y;
-		// assume labelmap is the same resolution as the depth map
-		const XnLabel * inUsers = users->pData + users->pMap->Res.X*y;
-
-		for(long x = 0;
-			x < depth->pMap->Res.X;
-			++x, out += 3, ++in, ++inUsers) {
-				XnDepthPixel pix = *in;
-				out[0] = (unsigned char)(*inUsers); // assuming we'll never pass 256 in the label
-				out[1] = pix >> 8;
-				out[2] = pix & 0xff;
-			}
-	}
-	boost::shared_ptr<std::string> final = base64_encode((const char *)outputBuffer, totalLength);
-	delete[] outputBuffer;
-	return final;
-}
+//static const char* base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+//
+//boost::shared_ptr<std::string> base64_encode(const char * dp, unsigned int size)
+//{
+//  boost::shared_ptr<std::string> output = boost::make_shared<std::string>("data:image/bmp;base64,");
+//  std::string& outdata = *output;
+//  outdata.reserve((outdata.size()) + ((size * 8) / 6) + 2);
+//  std::string::size_type remaining = size;
+//
+//  while (remaining >= 3) {
+//    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
+//    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
+//    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)]);
+//    outdata.push_back(base64_charset[(dp[2] & 0x3f)]);
+//    remaining -= 3; dp += 3;
+//  }
+//  
+//  if (remaining == 2) {
+//    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
+//    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
+//    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2)]);
+//    outdata.push_back(base64_charset[64]);
+//  } else if (remaining == 1) {
+//    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
+//    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4)]); 
+//    outdata.push_back(base64_charset[64]);
+//    outdata.push_back(base64_charset[64]);
+//  }
+//
+//  return output;
+//}
+//
+//
+//// instead of understanding the format, we'll just replace the data from existing valid BMPs
+//// ugly as hell, but will work just fine
+//const unsigned char bitmap_header_qvga[] = {
+//							 0x42, 0x4D, 0x36, 0x84, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 
+//							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x40, 0x01, 
+//							 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
+//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x84, 0x03, 0x00, 0x00, 0x00, 
+//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+//							 0x00, 0x00, 0x00, 0x00
+//							 };
+//
+//const unsigned char bitmap_header_vga[] = {
+//							 0x42, 0x4D, 0x36, 0x10, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 
+//							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x80, 0x02, 
+//							 0x00, 0x00, 0xE0, 0x01, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
+//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00, 0x00, 0x00, 
+//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+//							 0x00, 0x00, 0x00, 0x00
+//							 };
+//// hack - bitmap headers are both the same length...
+//const unsigned long bmp_header_size = sizeof(bitmap_header_vga); 
+//
+//
+//boost::shared_ptr<std::string> bitmap_from_depth(const XnDepthMetaData* depth, const XnSceneMetaData* users)
+//{
+//	unsigned long totalLength = bmp_header_size + (depth->pMap->Res.X * depth->pMap->Res.Y * 3);
+//	bool VGA = depth->pMap->Res.X == 640;
+//
+//	unsigned char * outputBuffer = new unsigned char[totalLength];
+//	unsigned char * out = outputBuffer;
+//	// TODO: Code is ugly, I don't care much
+//	if (VGA) {
+//		memcpy(outputBuffer, bitmap_header_vga, sizeof(bitmap_header_vga));
+//		out += sizeof(bitmap_header_vga);
+//	} else {
+//		memcpy(outputBuffer, bitmap_header_qvga, sizeof(bitmap_header_qvga));
+//		out += sizeof(bitmap_header_qvga);
+//	}
+//
+//	// TODO: unused?
+//	//const XnDepthPixel maxDepth = SensorOpenNI::m_depth.GetDeviceMaxDepth();
+//
+//	// simple copy loop - bitmap has its rows upside down, so we have to invert the rows
+//	// invert rows copy loop
+//	for(long y = depth->pMap->Res.Y - 1; y >= 0 ; y--) {
+//
+//		const XnDepthPixel * in = depth->pData + depth->pMap->Res.X*y;
+//		// assume labelmap is the same resolution as the depth map
+//		const XnLabel * inUsers = users->pData + users->pMap->Res.X*y;
+//
+//		for(long x = 0;
+//			x < depth->pMap->Res.X;
+//			++x, out += 3, ++in, ++inUsers) {
+//				XnDepthPixel pix = *in;
+//				out[0] = (unsigned char)(*inUsers); // assuming we'll never pass 256 in the label
+//				out[1] = pix >> 8;
+//				out[2] = pix & 0xff;
+//			}
+//	}
+//	boost::shared_ptr<std::string> final = base64_encode((const char *)outputBuffer, totalLength);
+//	delete[] outputBuffer;
+//	return final;
+//}
 
 // END HUGE TODO
 
@@ -461,9 +461,9 @@ SensorOpenNI::SensorOpenNI() :
 	m_initialized(false), m_error(false),
 	m_lastNewDataTime(0xFFFFFFFFFFFFFFFFULL),
 	m_pContext(NULL),
-	m_pSceneMD(NULL), m_pDepthMD(NULL),
+	m_pSceneMD(NULL), m_pDepthMD(NULL), m_pImageMD(NULL),
 	m_depth(NULL), m_users(NULL), m_device(NULL),
-	m_gestures(NULL), m_hands(NULL)
+	m_gestures(NULL), m_hands(NULL), m_image(NULL)
 {
 	//TODO: refactor this function to reduce error checking boilerplate
 	XnStatus nRetVal = XN_STATUS_OK;
@@ -486,6 +486,7 @@ SensorOpenNI::SensorOpenNI() :
 	}
 	m_pSceneMD = xnAllocateSceneMetaData();
 	m_pDepthMD = xnAllocateDepthMetaData();
+	m_pImageMD = xnAllocateImageMetaData();
 	xnOSStrCopy(m_license.strKey, "0KOIk2JeIBYClPWVnMoRKn5cdY4=", sizeof(m_license.strKey));
 	xnOSStrCopy(m_license.strVendor, "PrimeSense", sizeof(m_license.strVendor));
 	xnAddLicense(m_pContext, &m_license);
@@ -542,7 +543,16 @@ SensorOpenNI::SensorOpenNI() :
 	} else {
 		FBLOG_INFO("xnInit", "ok create production tree");
 	}
-
+	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_IMAGE, NULL, &m_image, NULL);
+	if (nRetVal != XN_STATUS_OK) {
+		FBLOG_DEBUG("xnInit", "fail create production tree");
+		m_lastFrame = -6;
+		xnContextRelease(m_pContext);
+		m_pContext = NULL;
+		return;
+	} else {
+		FBLOG_INFO("xnInit", "ok create production tree");
+	}
 	// make sure global mirror is on
 	xnSetGlobalMirror(m_pContext, true);
 
@@ -601,6 +611,10 @@ SensorOpenNI::~SensorOpenNI()
 		xnFreeDepthMetaData(m_pDepthMD);
 		m_pDepthMD = NULL;
 	}
+	if (NULL != m_pImageMD) {
+		xnFreeImageMetaData(m_pImageMD);
+		m_pDepthMD = NULL;
+	}
 	if (NULL != m_hands) { 
 		xnProductionNodeRelease(m_hands);
 		m_hands = NULL;
@@ -630,12 +644,12 @@ bool SensorOpenNI::Valid() const {
 	return m_initialized && (!m_error);
 }
 
-bool SensorOpenNI::ReadFrame() {
+bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer) {
 	//TODO: refactor so that the per-frame results are encapsulated in an object
 	//      instead of having a stateful object
 
 	if (!Valid()) return false;
-	m_gotImage = false;
+	//m_gotImage = false;
 
 	XnStatus nRetVal = xnWaitNoneUpdateAll(m_pContext);
 	if (nRetVal != XN_STATUS_OK) {
@@ -663,6 +677,72 @@ bool SensorOpenNI::ReadFrame() {
 	//m_lastNewDataTime = m_depthMD.Timestamp();
 	xnGetUserPixels(m_users, 0, m_pSceneMD);
 
+	if (updateDepth) {
+		XnUInt32 xRatio = m_pDepthMD->pMap->Res.X / MAP_XRES; // assume there's never going to up upscaling
+		XnUInt32 yRatio = m_pDepthMD->pMap->Res.Y / MAP_YRES;
+		if (isWebplayer) {
+			// for webplayer, increment every pixel by 1 to solve null-termination problem
+			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+				// get start-of-line read pointer
+				const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
+				for(XnUInt32 x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
+					m_depthBuffer[x + y*MAP_XRES*2] = (*p) | 1; // set LSB on least-significant byte
+					m_depthBuffer[x + 1 + y*MAP_XRES*2] = ((*p) >> 8) | (1<<7); // MSB on most-significant
+				}
+			}
+		} else {
+			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+				const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
+				for(XnUInt32 x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
+					m_depthBuffer[x + y*MAP_XRES*2] = (*p);
+					m_depthBuffer[x + 1 + y*MAP_XRES*2] = (*p) >> 8;
+				}
+			}
+		}
+		//m_depthJS.reset(); // needed to stop memory leak
+		m_depthJS.assign(FB::make_variant(m_depthBuffer));
+
+	} // if (updateDepth)
+	if (updateImage) {
+		xnGetImageMetaData(m_image, m_pImageMD);
+		XnUInt32 xRatio = m_pImageMD->pMap->Res.X / MAP_XRES; // assume there's never going to up upscaling
+		XnUInt32 yRatio = m_pImageMD->pMap->Res.Y / MAP_YRES;
+		//TODO: support only RGB24 by checking m_pImageMD->pMap->PixelFormat
+		// right now it's assuming RGB24, not validating
+		if (isWebplayer) {
+			// for webplayer, increment every pixel by 1 to solve null-termination problem
+			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+				// get start-of-line read pointer
+				const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
+				for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
+					unsigned char r = p[0];
+					unsigned char g = p[1];
+					unsigned char b = p[2];
+					m_imageBuffer[x + y*MAP_XRES*3] = (char) (r | 1);
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) (g | 1);
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) (b | 1);
+				}
+			}
+		} else {
+			// for webplayer, increment every pixel by 1 to solve null-termination problem
+			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+				// get start-of-line read pointer
+				const XnUInt8 * p = m_pImageMD->pData + ((y*yRatio*m_pImageMD->pMap->Res.X*3) / 2);
+				// unrolled for two pixels (3 characters)
+				// x is in characters (it's used for output)
+				for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
+					unsigned char r = p[0];
+					unsigned char g = p[1];
+					unsigned char b = p[2];
+					m_imageBuffer[x + y*MAP_XRES*3] = (char) r;
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) g;
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) b;
+				}
+			}
+		}
+		//m_imageJS.reset(); //needed to stop memory leak
+		m_imageJS.assign(FB::make_variant(m_imageBuffer));
+	}// if (updateImage)
 	Json::Value pluginData;
 	pluginData["hands"] = MakeHandsJsonList();
 	pluginData["users"] = MakeUsersJsonList();
@@ -670,15 +750,15 @@ bool SensorOpenNI::ReadFrame() {
 	m_eventData = m_writer.write(pluginData); //TODO: unhack
 	return true;
 }
-
-boost::shared_ptr< FB::variant > SensorOpenNI::GetImageBase64() const {
-	if (!Valid()) return boost::shared_ptr< FB::variant >();
-	if (!m_gotImage) {
-		m_imageData = boost::make_shared< FB::variant >(*bitmap_from_depth(m_pDepthMD, m_pSceneMD));
-		m_gotImage = true;
-	}
-	return m_imageData;
-}
+//
+//boost::shared_ptr< FB::variant > SensorOpenNI::GetImageBase64() const {
+//	if (!Valid()) return boost::shared_ptr< FB::variant >();
+//	if (!m_gotImage) {
+//		m_imageData = boost::make_shared< FB::variant >(*bitmap_from_depth(m_pDepthMD, m_pSceneMD));
+//		m_gotImage = true;
+//	}
+//	return m_imageData;
+//}
 
 const std::string& SensorOpenNI::GetEventData() const {
 	return m_eventData;

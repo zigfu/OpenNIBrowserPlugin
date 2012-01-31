@@ -61,13 +61,15 @@ private:
 	void set_firingEvents(const bool firingEvents);
 	bool firingEvents;
 
+	void requestStreams(bool updateDepth, bool updateImage, bool isWebplayer);
+
 	//TODO: unhack
-public:
-	void setImage(FB::JSAPIPtr img);
-	FB::JSAPIPtr getImage() const;
-private:
-	FB::JSAPIPtr m_image;
-	mutable boost::recursive_mutex m_imageMutex;
+//public:
+//	void setImage(FB::JSAPIPtr img);
+//	FB::JSAPIPtr getImage() const;
+//private:
+//	FB::JSAPIPtr m_image;
+//	mutable boost::recursive_mutex m_imageMutex;
 
 };
 

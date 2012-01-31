@@ -28,9 +28,19 @@
 ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host)
 {
 	firingEvents = true;
-	registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
+	//registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
+	registerMethod("requestStreams", make_method(this, &ZigJSAPI::requestStreams));
     registerProperty("firingEvents",  make_property(this, &ZigJSAPI::get_firingEvents, &ZigJSAPI::set_firingEvents));
-	registerAttribute("version", FBSTRING_PLUGIN_VERSION, true); 
+	registerAttribute("version", FBSTRING_PLUGIN_VERSION, true);
+	//TODO: don't hardcode
+	FB::VariantMap res;
+	res["width"] = 160;
+	res["height"] = 120;
+	registerAttribute("depthMapResolution", res, true);
+	registerAttribute("imageMapResolution", res, true);
+	registerAttribute("imageMap", "", false);
+	registerAttribute("depthMap", "", false);
+	registerAttribute("isZig", true, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,20 +135,25 @@ void ZigJSAPI::onNewFrame(const std::string& blah)
 	}
 }
 
+void ZigJSAPI::requestStreams(bool updateDepth, bool updateImage, bool isWebplayer)
+{
+	//note: this always happens from the main thread so it should be safe
+	ZigJS::SetStreams(updateDepth, updateImage, isWebplayer);
+}
 
 
 //TODO: unhack
-void ZigJSAPI::setImage(FB::JSAPIPtr img)
-{
-	// unnecessary lock - we're doing everything out of the same thread now
-	//boost::recursive_mutex::scoped_lock lock(m_imageMutex);
-	m_image = img;
-}
-
-FB::JSAPIPtr ZigJSAPI::getImage() const
-{
-	// unnecessary lock - we're doing everything out of the same thread now
-	//boost::recursive_mutex::scoped_lock lock(m_imageMutex);
-	return m_image;
-}
+//void ZigJSAPI::setImage(FB::JSAPIPtr img)
+//{
+//	// unnecessary lock - we're doing everything out of the same thread now
+//	//boost::recursive_mutex::scoped_lock lock(m_imageMutex);
+//	m_image = img;
+//}
+//
+//FB::JSAPIPtr ZigJSAPI::getImage() const
+//{
+//	// unnecessary lock - we're doing everything out of the same thread now
+//	//boost::recursive_mutex::scoped_lock lock(m_imageMutex);
+//	return m_image;
+//}
 

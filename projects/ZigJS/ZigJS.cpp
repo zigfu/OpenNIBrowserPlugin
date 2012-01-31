@@ -28,9 +28,16 @@ void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 //	boost::recursive_mutex::scoped_lock lock(s_listenersMutex);
 	s_listeners.push_back(listener);
 }
-
-//END JSON
-
+//TODO: something that handles multiple tabs in a sane fashion
+bool ZigJS::s_getImage = false;
+bool ZigJS::s_getDepth = false;
+bool ZigJS::s_isWebplayer = false;
+void ZigJS::SetStreams(bool getDepth, bool getImage, bool isWebplayer)
+{
+	s_getImage = getImage;
+	s_getDepth = getDepth;
+	s_isWebplayer = isWebplayer;
+}
 const int REOPEN_WAIT_FRAMES = 450;
 void ZigJS::ReadFrame(void *)
 {
@@ -53,7 +60,7 @@ void ZigJS::ReadFrame(void *)
 		return;
 	}
 
-	if (!s_sensor->ReadFrame()) {
+	if (!s_sensor->ReadFrame(s_getDepth, s_getImage, s_isWebplayer)) {
 		return; // No data, do nothing...
 	}
 
@@ -61,9 +68,17 @@ void ZigJS::ReadFrame(void *)
 		ZigJSAPIPtr realPtr = i->lock();
 		if (realPtr) {
 			try {
-				FB::JSAPIPtr image = realPtr->getImage();
-				if (image) {
-					image->SetProperty("src", *(s_sensor->GetImageBase64()));
+				//FB::JSAPIPtr image = realPtr->getImage();
+				//if (image) {
+				//	image->SetProperty("src", *(s_sensor->GetImageBase64()));
+				//}
+				if (s_getImage) {
+					//realPtr->unregisterAttribute("imageMap");
+					realPtr->setAttribute("imageMap", s_sensor->GetImage());
+				}
+				if (s_getDepth) { 
+					//realPtr->unregisterAttribute("depthMap");
+					realPtr->setAttribute("depthMap", s_sensor->GetDepth());
 				}
 				realPtr->onNewFrame(s_sensor->GetEventData());
 				++i; // advance i if there were no exceptions

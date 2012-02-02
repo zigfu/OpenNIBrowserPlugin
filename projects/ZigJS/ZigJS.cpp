@@ -51,6 +51,7 @@ void ZigJS::ReadFrame(void *)
 									//TODO: find another way
 			s_sensor = InitSensor();
 			frameRestCount = 0;
+			if (!s_sensor) return;
 		} else {
 			return;
 		}

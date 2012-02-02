@@ -8,7 +8,7 @@ SensorPtr Sensor::CreateSensor() {
 	//try opening KinectSDK, then OpenNI
 	SensorPtr result;
 	if (SensorKinectSDK::Available()) {
-		result = SensorPtr(new SensorKinectSDK);
+		result = SensorKinectSDK::GetInstance();
 		if ((result) && (result->Valid())) {
 			return result;
 		}

@@ -12,8 +12,9 @@ FB_FORWARD_PTR(INuiSensor);
 
 class SensorKinectSDK : public Sensor {
 public:
+	static SensorPtr GetInstance();
 	static bool Available(); // installed? is there a sensor connected using this API?
-	SensorKinectSDK();
+	SensorKinectSDK(const wchar_t* id);
 	virtual ~SensorKinectSDK();
 
 	virtual bool ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer); //true if there is new data, false otherwise
@@ -24,7 +25,7 @@ public:
 private:
 	static bool Init();
 	static void Unload();
-	INuiSensorPtr m_sensor;
+	INuiSensor* m_sensor;
 
 	bool m_initialized;
 	bool m_error;
@@ -34,10 +35,14 @@ private:
 
 	std::string m_lastFrameData;
 	Json::FastWriter m_writer;
+
+	static void __stdcall SensorStatusCallback(long hrStatus, wchar_t* instanceName, wchar_t* uniqueDeviceName, void* pUserData);
+	static SensorPtr s_activeInstance;
 };
 #else // non-windows - dummy object
 class SensorKinectSDK : public Sensor {
 public:
+	static SensorPtr GetInstance() { return SensorPtr(); } // return null ptr
 	static bool Available() { return false; } // installed? is there a sensor connected using this API?
 	virtual ~SensorKinectSDK() {}
 

@@ -97,66 +97,74 @@ static Matrix3f orientationFromYZ(Vector3f vy, Vector3f vz)
 
 
 /////// END OF THAT SHIT
-typedef HRESULT (WINAPI *NuiCreateSensorByIndexFuncPtr)( int index, _Out_ INuiSensor ** ppNuiSensor );
-NuiCreateSensorByIndexFuncPtr pNuiCreateSensorByIndexFuncPtr = NULL;
 const TCHAR KINECTDLL[] = TEXT("Kinect10.dll");
-typedef HRESULT (WINAPI * NuiGetSensorCountFuncPtr)( int *pCount );
-NuiGetSensorCountFuncPtr pNuiGetSensorCount = NULL;
- 
-
 bool SensorKinectSDK::Available() {
-	if (!Init()) return false;
-	int sensorCount = 0;
-	HRESULT hr = pNuiGetSensorCount(&sensorCount);
-	if (FAILED(hr)) {
-		return false;
-	}
-	return sensorCount > 0;
+	return Init();
 }
 
-static HMODULE kinectDLL = NULL;
+//TODO: DON'T USE THIS RIGHT NOW!
 void SensorKinectSDK::Unload() {
-	if (NULL != kinectDLL) {
-		pNuiCreateSensorByIndexFuncPtr = NULL;
-		pNuiGetSensorCount = NULL;
-		FreeLibrary(kinectDLL);
-		kinectDLL = NULL;
+}
+SensorPtr SensorKinectSDK::s_activeInstance;
+void CALLBACK SensorKinectSDK::SensorStatusCallback(long hrStatus, wchar_t* instanceName, wchar_t* uniqueDeviceName, void* pUserData)
+{
+	//if (SUCCEEDED(hrStatus)) {
+	if (0 == hrStatus) {
+		SensorPtr newInstance(new SensorKinectSDK(instanceName));
+		s_activeInstance = newInstance;
+	} else {
+		// kill the instance?
 	}
+}
+
+static SensorPtr s_activeInstance;
+SensorPtr SensorKinectSDK::GetInstance() {
+	//TODO: there's probably a race between this and SensorStatusCallback, we just don't really want to mess with this shit,
+	// and it'll require extremely unlikely timing
+	if (!s_activeInstance || (!s_activeInstance->Valid())) {
+		s_activeInstance.reset(new SensorKinectSDK(NULL));
+	}
+	return s_activeInstance; // creates a copy, hurrah!
 }
 bool SensorKinectSDK::Init()
 {
-	if (pNuiCreateSensorByIndexFuncPtr) {
+	//TODO: leaking a reference to kinect DLL if we load it
+	if ((NULL != GetModuleHandle(KINECTDLL)) || (NULL != LoadLibrary(KINECTDLL))) {
+		NuiSetDeviceStatusCallback((NuiStatusProc)&SensorKinectSDK::SensorStatusCallback, NULL);
 		return true;
 	}
-	// note: we leak refs to the DLL (not that bad - we want to be loaded till the process dies anyway)
-	if (NULL == kinectDLL) {
-		kinectDLL = LoadLibrary(KINECTDLL);
-		if (NULL == kinectDLL) {
-			return false;
-		}
-	}
-	pNuiGetSensorCount = (NuiGetSensorCountFuncPtr)GetProcAddress(kinectDLL, "NuiGetSensorCount");
-	if (NULL == pNuiGetSensorCount) {
-		return false;
-	}
-	pNuiCreateSensorByIndexFuncPtr = (NuiCreateSensorByIndexFuncPtr)GetProcAddress(kinectDLL, "NuiCreateSensorByIndex");
-	return NULL == pNuiCreateSensorByIndexFuncPtr;
+	return false;
 }
 
-SensorKinectSDK::SensorKinectSDK() :
-	m_error(false), m_initialized(false)
+SensorKinectSDK::SensorKinectSDK(const wchar_t* id) :
+	m_error(false), m_initialized(false), m_sensor(NULL)
 {
 	// try initializing the SDK
 	if (!SensorKinectSDK::Init()) return;
 	if (!SensorKinectSDK::Available()) return; // if no sensor connected fail silently
 	// create sensor
+	HRESULT hr = S_OK;
 	INuiSensor * pNuiSensor = NULL;
-	HRESULT hr = pNuiCreateSensorByIndexFuncPtr(0, &pNuiSensor);//NuiCreateSensorByIndex(0, &pNuiSensor);
+
+	if (NULL != id) {
+		hr = NuiCreateSensorById(id, &pNuiSensor);//NuiCreateSensorByIndexFuncPtr(0, &pNuiSensor);
+	} else {
+		int sensorCount = 0;
+		hr = NuiGetSensorCount(&sensorCount);
+		if (FAILED(hr)) {
+			return;
+		}
+		if (sensorCount <= 0) {
+			return;
+		}
+		hr = NuiCreateSensorByIndex(0, &pNuiSensor);
+	}
+	// error test both cases of the previous if
     if ( FAILED(hr) )
     {
 		return;
     }
-	m_sensor.reset(pNuiSensor);
+	m_sensor =pNuiSensor;
 
 	// init it to use depth, skeleton
 	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR;
@@ -190,17 +198,12 @@ SensorKinectSDK::SensorKinectSDK() :
 SensorKinectSDK::~SensorKinectSDK() {
 	// Unforunately once NuiShutdown is called we cant call NuiInitialize again, so we're
 	// not really shutting down
-	m_sensor.reset();
-	return;
-	/* //TODO: make this work
-	if ( m_sensor )
-    {
-        m_sensor->NuiShutdown( );
+	if (m_sensor) {
+		m_sensor->NuiShutdown( );
 		m_sensor->Release();
-		m_sensor.reset();
-    }
-	SensorKinectSDK::Unload();
-	*/
+		m_sensor = NULL;
+	}
+	return;
 }
 
 bool SensorKinectSDK::Valid() const {
@@ -401,6 +404,7 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
     {
 		if (read != E_NUI_FRAME_NO_DATA) {
 			m_error = true; // actual error, not only "no new data"
+			m_sensor;
 		}
 		return false;
 	} else {

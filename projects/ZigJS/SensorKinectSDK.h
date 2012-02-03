@@ -21,10 +21,9 @@ public:
 
 	virtual bool Valid() const;
 	virtual const std::string& GetEventData() const;
-
+	static void Unload();
 private:
 	static bool Init();
-	static void Unload();
 	INuiSensor* m_sensor;
 
 	bool m_initialized;

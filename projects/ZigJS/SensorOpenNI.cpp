@@ -764,10 +764,14 @@ const std::string& SensorOpenNI::GetEventData() const {
 	return m_eventData;
 }
 
+void SensorOpenNI::Unload() {
+}
+
 #ifdef _WIN32
 #include <Windows.h>
 const TCHAR OPENNIDLL[] = TEXT("OpenNI.dll");
 bool SensorOpenNI::Available() {
+	//TODO: leaking a reference to the OpenNI DLL
 	return (GetModuleHandle(OPENNIDLL) != NULL) || (LoadLibrary(OPENNIDLL) != NULL);
 }
 #else

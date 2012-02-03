@@ -38,6 +38,7 @@ public:
 	bool Valid() const;
 	//boost::shared_ptr< FB::variant > GetImageBase64() const;
 	const std::string& GetEventData() const;
+	static void Unload();
 private:
 	FB::VariantList GetJointsList(XnUserID userid);
 	FB::VariantList PositionToVariant(XnPoint3D pos);

@@ -148,7 +148,10 @@ void ZigJS::StaticDeinitialize()
     // always be called just before the plugin library is unloaded
 	if (s_timer) {
 		s_timer->stop();
+		s_timer.reset();
 	}
+	s_sensor.reset();
+	Sensor::Unload();
 }
 
 

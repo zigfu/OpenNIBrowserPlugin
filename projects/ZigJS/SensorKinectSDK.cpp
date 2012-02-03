@@ -104,6 +104,7 @@ bool SensorKinectSDK::Available() {
 
 //TODO: DON'T USE THIS RIGHT NOW!
 void SensorKinectSDK::Unload() {
+	s_activeInstance.reset();
 }
 SensorPtr SensorKinectSDK::s_activeInstance;
 void CALLBACK SensorKinectSDK::SensorStatusCallback(long hrStatus, wchar_t* instanceName, wchar_t* uniqueDeviceName, void* pUserData)

@@ -20,3 +20,9 @@ SensorPtr Sensor::CreateSensor() {
 }
 
 Sensor::~Sensor() {}
+
+void Sensor::Unload()
+{
+	SensorOpenNI::Unload();
+	SensorKinectSDK::Unload();
+}

@@ -31,6 +31,7 @@ public:
 		m_imageBuffer.resize(MAP_XRES*MAP_YRES*3); //24-bpp
 	}
 	static void Unload();
+	static void Init();
 protected:
 	FB::variant m_imageJS;
 	FB::variant m_depthJS;

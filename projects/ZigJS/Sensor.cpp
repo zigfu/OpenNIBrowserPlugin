@@ -5,6 +5,8 @@
 
 
 SensorPtr Sensor::CreateSensor() {
+	//TODO: separate SDK availability + initialization from
+	//      the sensor read object instead of static functions
 	//try opening KinectSDK, then OpenNI
 	SensorPtr result;
 	if (SensorKinectSDK::Available()) {
@@ -14,7 +16,7 @@ SensorPtr Sensor::CreateSensor() {
 		}
 	}
 	if (SensorOpenNI::Available()) {
-		result = SensorPtr(new SensorOpenNI);
+		result = SensorOpenNI::GetInstance();
 	}
 	return result;
 }
@@ -23,6 +25,12 @@ Sensor::~Sensor() {}
 
 void Sensor::Unload()
 {
-	SensorOpenNI::Unload();
-	SensorKinectSDK::Unload();
+	if (SensorOpenNI::Available()) SensorOpenNI::Unload();
+	if (SensorKinectSDK::Available()) SensorKinectSDK::Unload();
+}
+
+void Sensor::Init()
+{
+	if (SensorOpenNI::Available()) SensorOpenNI::Init();
+	if (SensorKinectSDK::Available()) SensorKinectSDK::Init();
 }

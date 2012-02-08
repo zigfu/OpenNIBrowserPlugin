@@ -2,6 +2,7 @@
 #include "SensorOpenNI.h"
 #include "logging.h"
 #include "boost/bind.hpp"
+#include <XnUSB.h>
 
 using namespace boost::assign;
 
@@ -107,7 +108,17 @@ using namespace boost::assign;
 
 
 const int MAX_USERS = 16;
-
+SensorPtr SensorOpenNI::s_activeInstance;
+SensorPtr SensorOpenNI::GetInstance()
+{
+	//TODO: there's probably a race between this and SensorStatusCallback, we just don't really want to mess with this shit,
+	// and it'll require extremely unlikely timing
+	if (!s_activeInstance || (!s_activeInstance->Valid())) {
+		s_activeInstance.reset(); // force d'tor to be called before we call the c'tor
+		s_activeInstance.reset(new SensorOpenNI);
+	}
+	return s_activeInstance; // creates a copy, hurrah!
+}
 FB::VariantList SensorOpenNI::PositionToVariant(XnPoint3D pos)
 {
 	FB::VariantList xyz;
@@ -770,13 +781,23 @@ void SensorOpenNI::Unload() {
 #ifdef _WIN32
 #include <Windows.h>
 const TCHAR OPENNIDLL[] = TEXT("OpenNI.dll");
-bool SensorOpenNI::Available() {
+bool SensorOpenNI::Available()
+{
 	//TODO: leaking a reference to the OpenNI DLL
 	return (GetModuleHandle(OPENNIDLL) != NULL) || (LoadLibrary(OPENNIDLL) != NULL);
 }
 #else
 // this is the only SDK available on non-windows, so we treat it as a prerequisite
-bool SensorOpenNI::Available() {
+bool SensorOpenNI::Available()
+{
 	return true;
 }
 #endif
+
+bool SensorOpenNI::Init()
+{
+	if (!SensorOpenNI::Available()) return false;
+	//xnUSBInit();
+	//TODO: write this code once xnUSBSetCallbackHandler is written for *nix
+	//xnUSBSetCallbackHandler
+}

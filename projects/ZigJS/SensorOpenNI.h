@@ -28,6 +28,7 @@ public:
 //TODO: inherit from some Sensor interface
 class SensorOpenNI : public Sensor {
 public:
+	static SensorPtr GetInstance();
 	static bool Available(); // installed? is there a sensor connected using this API?
 
 	SensorOpenNI();
@@ -38,8 +39,13 @@ public:
 	bool Valid() const;
 	//boost::shared_ptr< FB::variant > GetImageBase64() const;
 	const std::string& GetEventData() const;
+
 	static void Unload();
+	static bool Init();
 private:
+
+	static SensorPtr s_activeInstance;
+
 	FB::VariantList GetJointsList(XnUserID userid);
 	FB::VariantList PositionToVariant(XnPoint3D pos);
 	FB::VariantList OrientationToVariant(XnMatrix3X3 ori);

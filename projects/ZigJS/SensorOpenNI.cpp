@@ -758,6 +758,7 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 	pluginData["hands"] = MakeHandsJsonList();
 	pluginData["users"] = MakeUsersJsonList();
 	pluginData["frameId"] = m_lastFrame;
+	pluginData["timestamp"] = (double)m_lastNewDataTime;
 	m_eventData = m_writer.write(pluginData); //TODO: unhack
 	return true;
 }

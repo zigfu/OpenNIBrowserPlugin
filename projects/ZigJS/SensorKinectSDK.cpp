@@ -405,7 +405,6 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
     {
 		if (read != E_NUI_FRAME_NO_DATA) {
 			m_error = true; // actual error, not only "no new data"
-			m_sensor;
 		}
 		return false;
 	} else {
@@ -548,6 +547,7 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 	pluginData["users"] = jsUsers;
 	pluginData["hands"] = Json::Value(Json::arrayValue);
 	pluginData["frameId"] = (int)skeletonFrame.dwFrameNumber;
+	pluginData["timestamp"] = (double)skeletonFrame.liTimeStamp.QuadPart;
 	m_lastFrameData = m_writer.write(pluginData);
 	return true;
 

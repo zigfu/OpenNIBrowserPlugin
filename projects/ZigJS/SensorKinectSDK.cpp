@@ -484,13 +484,12 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 					unsigned char r = p[0];
 					unsigned char g = p[1];
 					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = (char) (r | 1);
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) (g | 1);
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) (b | 1);
+					m_imageBuffer[x + y*MAP_XRES*3] = (r | 1);
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (g | 1);
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (b | 1);
 				}
 			}
 		} else {
-			// for webplayer, increment every pixel by 1 to solve null-termination problem
 			for(int y = 0; y < MAP_YRES; y++) {
 				// get start-of-line read pointer
 				const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
@@ -498,9 +497,9 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 					unsigned char r = p[0];
 					unsigned char g = p[1];
 					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = (char) (r | 1);
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) (g | 1);
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) (b | 1);
+					m_imageBuffer[x + y*MAP_XRES*3] = r;
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = g;
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = b;
 				}
 			}
 		}

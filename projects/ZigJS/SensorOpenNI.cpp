@@ -729,25 +729,24 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 					unsigned char r = p[0];
 					unsigned char g = p[1];
 					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = (char) (r | 1);
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) (g | 1);
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) (b | 1);
+					m_imageBuffer[x + y*MAP_XRES*3] = (r | 1);
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (g | 1);
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (b | 1);
 				}
 			}
 		} else {
-			// for webplayer, increment every pixel by 1 to solve null-termination problem
 			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
 				// get start-of-line read pointer
-				const XnUInt8 * p = m_pImageMD->pData + ((y*yRatio*m_pImageMD->pMap->Res.X*3) / 2);
+				const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
 				// unrolled for two pixels (3 characters)
 				// x is in characters (it's used for output)
 				for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
 					unsigned char r = p[0];
 					unsigned char g = p[1];
 					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = (char) r;
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (char) g;
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (char) b;
+					m_imageBuffer[x + y*MAP_XRES*3] = r;
+					m_imageBuffer[x + 1 + y*MAP_XRES*3] = g;
+					m_imageBuffer[x + 2 + y*MAP_XRES*3] = b;
 				}
 			}
 		}

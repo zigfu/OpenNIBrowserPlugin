@@ -25,7 +25,7 @@
 /// @see FB::JSAPIAuto::registerEvent
 ///////////////////////////////////////////////////////////////////////////////
 
-ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host)
+ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_plugin(plugin), m_host(host), m_watermark(host)
 {
 	firingEvents = true;
 	//registerMethod("setImage", make_method(this, &ZigJSAPI::setImage));
@@ -36,11 +36,22 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	FB::VariantMap res;
 	res["width"] = 160;
 	res["height"] = 120;
+	//TODO: fix read-only-ness (get from upstream Firebreath)
 	registerAttribute("depthMapResolution", res, true);
 	registerAttribute("imageMapResolution", res, true);
 	registerAttribute("imageMap", "", false);
 	registerAttribute("depthMap", "", false);
 	registerAttribute("isZig", true, true);
+	registerProperty("watermark", make_property(this, &ZigJSAPI::get_Watermark));
+
+	registerMethod("invalidate", make_method(this, &ZigJSAPI::Invalidate));
+	// only expose this when debugging (easier than using a timer by far)
+	//registerMethod("test", make_method(this, &ZigJSAPI::Test));
+	registerMethod("validate", make_method(this, &ZigJSAPI::Validate));
+
+	// test every 5 secs or so
+	m_watermarkTimer = FB::Timer::getTimer(5000, false, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
+	m_watermarkTimer->start();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,6 +63,8 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 ///////////////////////////////////////////////////////////////////////////////
 ZigJSAPI::~ZigJSAPI()
 {
+	m_watermarkTimer->stop();
+	m_watermarkTimer.reset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,4 +169,17 @@ void ZigJSAPI::requestStreams(bool updateDepth, bool updateImage, bool isWebplay
 //	//boost::recursive_mutex::scoped_lock lock(m_imageMutex);
 //	return m_image;
 //}
+
+void ZigJSAPI::WatermarkTimerCB()
+{
+	m_host->ScheduleOnMainThread(shared_from_this(), boost::bind(&ZigJSAPI::WatermarkTest, this));
+}
+
+void ZigJSAPI::WatermarkTest()
+{
+	//test only returns true if validation was successful - restart the timer in that case
+	if (Test()) {
+		m_watermarkTimer->start();
+	}
+}
 

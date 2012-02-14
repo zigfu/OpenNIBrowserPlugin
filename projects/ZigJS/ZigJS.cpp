@@ -13,7 +13,7 @@
 #include "json/json.h"
 #include "fbjson.h"
 #include "Sensor.h"
-
+#include <cstdlib> // TODO: this is for srand(), do some real random number generation
 std::list< ZigJSAPIWeakPtr > ZigJS::s_listeners;
 //boost::recursive_mutex ZigJS::s_listenersMutex;
 SensorPtr ZigJS::s_sensor;
@@ -110,6 +110,7 @@ SensorPtr ZigJS::InitSensor()
 ///////////////////////////////////////////////////////////////////////////////
 void ZigJS::StaticInitialize()
 {
+	srand((unsigned)time(0));
 	s_sensor = InitSensor();
 	s_timer = FB::Timer::getTimer(30, true, &ZigJS::TimerCallback);
 	s_timer->start();

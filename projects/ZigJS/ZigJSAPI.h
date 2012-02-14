@@ -13,6 +13,8 @@
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
 #include "ZigJS.h"
+#include "Watermark.h"
+#include "Timer.h"
 
 class ZigJSAPI : public FB::JSAPIAuto
 {
@@ -56,12 +58,23 @@ public:
 private:
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;
+	Watermark m_watermark;
+	FB::JSObjectPtr get_Watermark() const { return m_watermark.GetElement(); }
 
 	bool get_firingEvents();
 	void set_firingEvents(const bool firingEvents);
 	bool firingEvents;
 
 	void requestStreams(bool updateDepth, bool updateImage, bool isWebplayer);
+
+	void Invalidate() { m_watermark.Invalidate(); }
+	bool Test() {return m_watermark.Test(); }
+	void Validate(int key) { m_watermark.Validate(key); }
+
+	FB::TimerPtr m_watermarkTimer;
+	void WatermarkTimerCB();
+	void WatermarkTest();
+	//bool showWatermark();
 
 	//TODO: unhack
 //public:

@@ -1,0 +1,28 @@
+#ifndef __Watermark_h__ 
+#define __Watermark_h__ 
+
+#include "BrowserHost.h"
+
+class Watermark {
+public:
+	Watermark(FB::BrowserHostPtr host);
+	~Watermark();
+	//bool IsOk(FB::BrowserHostPtr browser);
+	bool IsOk();
+	bool Test();
+	FB::JSObjectPtr GetElement() const { return m_element; };
+	void Invalidate();
+	void Validate(int key);
+private:
+	int m_token;
+	int m_tryCount;
+	static const int MaxAttempts = 3;
+
+	bool m_gotValidate; // did we get a validate for the last key?
+	bool m_ok; // are we okay?
+
+	FB::BrowserHostWeakPtr m_browser;
+	FB::JSObjectPtr m_element;
+};
+
+#endif

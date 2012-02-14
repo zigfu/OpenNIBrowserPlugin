@@ -389,7 +389,7 @@ void FB::JSAPIAuto::registerAttribute( const std::string &name, const FB::varian
 void FB::JSAPIAuto::unregisterAttribute( const std::string& name )
 {
     AttributeMap::iterator fnd = m_attributes.find(name);
-    if ( !fnd->second.readonly ) {
+    if ( (fnd != m_attributes.end()) && (!fnd->second.readonly) ) {
         throw FB::script_error("Cannot remove read-only property " + name);
     } else {
         if (fnd != m_attributes.end())
@@ -411,11 +411,15 @@ FB::variant FB::JSAPIAuto::getAttribute( const std::string& name )
 void FB::JSAPIAuto::setAttribute( const std::string& name, const FB::variant& value )
 {
     AttributeMap::iterator fnd = m_attributes.find(name);
-    if (fnd != m_attributes.end() || !fnd->second.readonly) {
+    if (fnd != m_attributes.end() && !fnd->second.readonly) {
         //m_attributes[name].value.assign(value);
 		fnd->second.value.assign(value);
         m_zoneMap[name] = getZone();
-    } else {
+    } else if (fnd == m_attributes.end()) {
+		Attribute attr = {value, false};
+		m_attributes[name] = attr;
+		m_zoneMap[name] = getZone();
+	} else {
         throw FB::script_error("Cannot set read-only property " + name);
     }
 }

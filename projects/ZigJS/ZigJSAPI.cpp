@@ -43,14 +43,15 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	registerAttribute("depthMap", "", false);
 	registerAttribute("isZig", true, true);
 	registerProperty("watermark", make_property(this, &ZigJSAPI::get_Watermark));
+	registerProperty("sensorConnected", make_property(this, &ZigJSAPI::get_sensorConnected));
 
 	registerMethod("invalidate", make_method(this, &ZigJSAPI::Invalidate));
 	// only expose this when debugging (easier than using a timer by far)
 	//registerMethod("test", make_method(this, &ZigJSAPI::Test));
 	registerMethod("validate", make_method(this, &ZigJSAPI::Validate));
 
-	// test every 5 secs or so
-	m_watermarkTimer = FB::Timer::getTimer(5000, false, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
+	// test every 7 secs or so
+	m_watermarkTimer = FB::Timer::getTimer(7000, true, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
 	m_watermarkTimer->start();
 }
 
@@ -142,14 +143,36 @@ void ZigJSAPI::set_firingEvents(bool firingEvents)
 //void ZigJSAPI::onNewFrame(const FB::variant& users, const FB::variant& hands)
 void ZigJSAPI::onNewFrame(const std::string& blah)
 {
+	if (!m_watermark.IsOk()) return;
 	if (firingEvents) {
 		//fire_NewFrame(users, hands);
 		fire_NewFrame(blah);
 	}
 }
 
+void ZigJSAPI::onStatusChange(bool connected)
+{
+	if (!m_watermark.IsOk()) return;
+	//m_host->htmlLog((boost::format("got status change event to state: %1%") % connected).str());
+	if (firingEvents) {
+		fire_StatusChange(connected);
+	}
+}
+void ZigJSAPI::setDepthMap(const FB::variant& depthMap)
+{
+	if (!m_watermark.IsOk()) return;
+	setAttribute("depthMap", depthMap);
+}
+void ZigJSAPI::setImageMap(const FB::variant& imageMap)
+{
+	if (!m_watermark.IsOk()) return;
+	setAttribute("imageMap", imageMap);
+}
+
+
 void ZigJSAPI::requestStreams(bool updateDepth, bool updateImage, bool isWebplayer)
 {
+	if (!m_watermark.IsOk()) return;
 	//note: this always happens from the main thread so it should be safe
 	ZigJS::SetStreams(updateDepth, updateImage, isWebplayer);
 }
@@ -178,8 +201,15 @@ void ZigJSAPI::WatermarkTimerCB()
 void ZigJSAPI::WatermarkTest()
 {
 	//test only returns true if validation was successful - restart the timer in that case
-	if (Test()) {
-		m_watermarkTimer->start();
+	if (!Test()) {
+		// stop trying again on failure
+		m_watermarkTimer->stop(); 
+		//m_watermarkTimer->start();
 	}
+}
+
+bool ZigJSAPI::get_sensorConnected()
+{
+	return ZigJS::IsSensorConnected();
 }
 

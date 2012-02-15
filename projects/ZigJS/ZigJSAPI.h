@@ -25,6 +25,8 @@ public:
     virtual ~ZigJSAPI();
 
     ZigJSPtr getPlugin();
+	//////////////// DON'T USE FROM OUTSIDE ZigJSAPI!!! (unless you know what you doing (take off every zig!))
+	//////////////// These APIs don't check against the watermark!
     // Event helpers
 	FB_JSAPI_EVENT(WaveGesture, 3, (float,float,float));
 	FB_JSAPI_EVENT(HandCreate, 5, (int,float,float,float,float));
@@ -39,7 +41,7 @@ public:
 	//FB_JSAPI_EVENT(NewFrame, 2,(const FB::variant&, const FB::variant&));
 	FB_JSAPI_EVENT(NewFrame, 1,(const std::string&));
 	//FB_JSAPI_EVENT(NewFrame, 0, ());
-
+	FB_JSAPI_EVENT(StatusChange, 1, (bool));
 	void onHandCreate(int handId, float x, float y, float z, float time);
 	void onHandUpdate(int handId, float x, float y, float z, float time);
 	void onHandDestroy(int handId, float time);
@@ -51,9 +53,12 @@ public:
 	void onUserLeft(int userId);
 	void onUserTrackingStarted(int userId);
 	void onUserTrackingStopped(int userId);
-
+	///////////////// END OF DON'T USE
+	void onStatusChange(bool connected);
 	//void onNewFrame(const FB::variant& users, const FB::variant& hands);
 	void onNewFrame(const std::string& out);
+	void setDepthMap(const FB::variant& depthMap);
+	void setImageMap(const FB::variant& imageMap);
 
 private:
 	ZigJSWeakPtr m_plugin;
@@ -64,6 +69,8 @@ private:
 	bool get_firingEvents();
 	void set_firingEvents(const bool firingEvents);
 	bool firingEvents;
+
+	bool get_sensorConnected();
 
 	void requestStreams(bool updateDepth, bool updateImage, bool isWebplayer);
 

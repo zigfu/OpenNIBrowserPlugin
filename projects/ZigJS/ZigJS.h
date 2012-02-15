@@ -48,7 +48,7 @@ public:
 	static void AddListener(ZigJSAPIWeakPtr listener);
 	static void ReadFrame(void *);
 	static void TimerCallback();
-	
+	static bool IsSensorConnected();
 public:
     ZigJS();
     virtual ~ZigJS();

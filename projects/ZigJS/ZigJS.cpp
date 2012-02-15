@@ -41,8 +41,15 @@ void ZigJS::SetStreams(bool getDepth, bool getImage, bool isWebplayer)
 const int REOPEN_WAIT_FRAMES = 450;
 void ZigJS::ReadFrame(void *)
 {
+	//TODO: another hack for raising the event.
+	// All this code smells and needs to be refactored - the wonders of 
+	// releasing quickly :(
+	static bool wasSensorConnected = false;
+	bool isSensorOk = true;
+	bool newDataAvailable = false;
 	// try reopening the sensor
 	if (!s_sensor) {
+		isSensorOk = false;
 		//TODO: mega-hack :(
 		static int frameRestCount = REOPEN_WAIT_FRAMES;
 		//s_sensor.reset();
@@ -51,37 +58,44 @@ void ZigJS::ReadFrame(void *)
 									//TODO: find another way
 			s_sensor = InitSensor();
 			frameRestCount = 0;
-			if (!s_sensor) return;
+			if (s_sensor) isSensorOk = true;
 		} else {
 			return;
 		}
 	}
-	if (!s_sensor->Valid()) {
+	if (isSensorOk && !s_sensor->Valid()) {
 		s_sensor.reset();
-		return;
+		isSensorOk = false;
 	}
 
-	if (!s_sensor->ReadFrame(s_getDepth, s_getImage, s_isWebplayer)) {
-		return; // No data, do nothing...
+	if (isSensorOk && !s_sensor->ReadFrame(s_getDepth, s_getImage, s_isWebplayer)) {
+		// No new data
+		newDataAvailable = false;
 	}
 
 	for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
 		ZigJSAPIPtr realPtr = i->lock();
 		if (realPtr) {
+
 			try {
 				//FB::JSAPIPtr image = realPtr->getImage();
 				//if (image) {
 				//	image->SetProperty("src", *(s_sensor->GetImageBase64()));
 				//}
-				if (s_getImage) {
-					//realPtr->unregisterAttribute("imageMap");
-					realPtr->setAttribute("imageMap", s_sensor->GetImage());
+				if (isSensorOk != wasSensorConnected) {
+					realPtr->onStatusChange(isSensorOk);
 				}
-				if (s_getDepth) { 
-					//realPtr->unregisterAttribute("depthMap");
-					realPtr->setAttribute("depthMap", s_sensor->GetDepth());
+				if (newDataAvailable) {
+					if (s_getImage) {
+						//realPtr->unregisterAttribute("imageMap");
+						realPtr->setImageMap(s_sensor->GetImage());
+					}
+					if (s_getDepth) { 
+						//realPtr->unregisterAttribute("depthMap");
+						realPtr->setDepthMap(s_sensor->GetDepth());
+					}
+					realPtr->onNewFrame(s_sensor->GetEventData());
 				}
-				realPtr->onNewFrame(s_sensor->GetEventData());
 				++i; // advance i if there were no exceptions
 			} catch(const FB::script_error&) {
 				// means the JSAPI is for a dead window, most likely. 
@@ -94,6 +108,7 @@ void ZigJS::ReadFrame(void *)
 			i = s_listeners.erase(i);
 		}
 	} // end of for
+	wasSensorConnected = isSensorOk;
 }
 
 
@@ -134,6 +149,11 @@ void ZigJS::TimerCallback()
 	if (host) {
 		host->ScheduleAsyncCall(&ZigJS::ReadFrame, NULL);
 	}
+}
+
+bool ZigJS::IsSensorConnected()
+{
+	return (s_sensor) && (s_sensor->Valid());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

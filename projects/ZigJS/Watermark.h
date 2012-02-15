@@ -27,10 +27,12 @@ private:
 	boost::posix_time::ptime m_lastValidationTime;
 	static const boost::posix_time::time_duration MaxDurationBetweenVerifications;
 
-	//TODO: don't include in release builds
+	//TODO: don't include in release builds, but include in release with debug info
 	inline void Log(const std::string& str) {
+#ifdef _DEBUG
 		FB::BrowserHostPtr browser = m_browser.lock();
 		if (browser) { browser->htmlLog(str); }
+#endif
 	}
 };
 

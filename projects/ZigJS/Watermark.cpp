@@ -9,6 +9,10 @@
 //#include "JSObject.h"
 #include <cstdlib> // TODO: for rand()
 #include <boost/format.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+// 15 seconds without verification is the max we allow
+const boost::posix_time::time_duration Watermark::MaxDurationBetweenVerifications = boost::posix_time::time_duration(0, 0, 15, 0);
 
 static const char watermarkHTML[] = "This is a watermark. <img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEQAAABECAYAAAA4E5OyAAAABGdBTUEAALGOfPtRkwAAACBjSFJNA"
 "ACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMe"
@@ -196,11 +200,13 @@ Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 	m_browser = browserPtr;
 	m_tryCount = 0;
 	m_token = rand();
+	m_lastValidationTime = boost::posix_time::second_clock::universal_time();
 
 	//TODO: make a nicer watermark
 	FB::DOM::ElementPtr body = browserPtr->getDOMDocument()->getBody();
 	m_element = browserPtr->getDOMDocument()->callMethod<FB::JSObjectPtr>("createElement", FB::variant_list_of("div"));
 	m_element->SetProperty("innerHTML", watermarkHTML);
+	//TODO: sorry :(
 	FB::DOM::Node::create(m_element)->getProperty<FB::JSObjectPtr>("style")->SetProperty("cssText", watermarkStyle);
 	body->callMethod<void>("appendChild", FB::variant_list_of(m_element));
 }
@@ -211,6 +217,12 @@ Watermark::~Watermark()
 
 bool Watermark::IsOk()
 {
+	if (m_ok) {
+		if (m_lastValidationTime + MaxDurationBetweenVerifications < boost::posix_time::second_clock::universal_time()) {
+			Log("Timed out since last validation!");
+			m_ok = false;
+		}
+	}
 	return m_ok;
 }
 
@@ -227,6 +239,7 @@ static const char * verificationFunction = "var plugins = document.getElementsBy
 "    var wmX = Math.floor(rect.left + (rect.width/2));"
 "    var wmY = Math.floor(rect.top + (rect.height/2));"
 "    if (document.elementFromPoint(wmX, wmY) != wm) {"
+//TODO: compile log only in debug mode
 "        console.log('invalidating because invisible'); console.log(wm); console.log(document.elementFromPoint(wmX, wmY));"
 "        o.invalidate();"
 "    } else {"
@@ -238,23 +251,21 @@ static const char * verificationFunction = "var plugins = document.getElementsBy
 bool Watermark::Test()
 {
 	//TODO: test for "known URLs" here!
-	FB::BrowserHostPtr browser = m_browser.lock();
-	browser->htmlLog("Got watermark test!");
+	Log("Got watermark test!");
 	if (m_ok) {
 		
 		if (!m_gotValidate) {
 			m_ok = false;
 			//TODO: remove/ifdef after debugging
-			if (browser) {
-				browser->htmlLog("watermark validation failed - didn't get successful validate!");
-			}
+			Log("watermark validation failed - didn't get successful validate!");
 		} else { // got a good validate - reset state for next cycle
 			m_tryCount = 0;
 			m_gotValidate = false;
 			m_token = rand();
+			FB::BrowserHostPtr browser = m_browser.lock();
 			if (browser) {
-				browser->htmlLog("watermark validation ok, starting next round");
-				//browser->htmlLog((boost::format(verificationFunction) % m_token).str());
+				Log("watermark validation ok, starting next round");
+				//Log((boost::format(verificationFunction) % m_token).str());
 				browser->evaluateJavaScript((boost::format(verificationFunction) % m_token).str());
 				return true;
 			}
@@ -265,18 +276,13 @@ bool Watermark::Test()
 
 void Watermark::Invalidate()
 {
-	FB::BrowserHostPtr browser = m_browser.lock();
-	if (browser) {
-		browser->htmlLog("Got invalidate from javascript!");
-	}
+	Log("Got invalidate from javascript!");
 	m_ok = false;
 }
 void Watermark::Validate(int key)
 {
-	FB::BrowserHostPtr browser = m_browser.lock();
-	if (browser) {
-		browser->htmlLog((boost::format("Got validate(%1%) against token(%2%) (current try count is %3%)") % key % m_token % m_tryCount).str());
-	}
+	Log((boost::format("Got validate(%1%) against token(%2%) (current try count is %3%)") % key % m_token % m_tryCount).str());
+
 	if (m_tryCount >= MaxAttempts) {
 		m_ok = false;
 		return;
@@ -284,6 +290,7 @@ void Watermark::Validate(int key)
 	m_tryCount++;
 	if (key == m_token) {
 		m_gotValidate = true;
+		m_lastValidationTime = boost::posix_time::second_clock::universal_time();
 	} //TODO: immediately fail otherwise?
 }
 

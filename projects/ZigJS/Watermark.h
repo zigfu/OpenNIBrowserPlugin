@@ -2,6 +2,7 @@
 #define __Watermark_h__ 
 
 #include "BrowserHost.h"
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 class Watermark {
 public:
@@ -23,6 +24,14 @@ private:
 
 	FB::BrowserHostWeakPtr m_browser;
 	FB::JSObjectPtr m_element;
+	boost::posix_time::ptime m_lastValidationTime;
+	static const boost::posix_time::time_duration MaxDurationBetweenVerifications;
+
+	//TODO: don't include in release builds
+	inline void Log(const std::string& str) {
+		FB::BrowserHostPtr browser = m_browser.lock();
+		if (browser) { browser->htmlLog(str); }
+	}
 };
 
 #endif

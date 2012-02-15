@@ -46,7 +46,7 @@ void ZigJS::ReadFrame(void *)
 	// releasing quickly :(
 	static bool wasSensorConnected = false;
 	bool isSensorOk = true;
-	bool newDataAvailable = true;
+	bool newDataAvailable = false;
 	// try reopening the sensor
 	if (!s_sensor) {
 		isSensorOk = false;
@@ -68,9 +68,9 @@ void ZigJS::ReadFrame(void *)
 		isSensorOk = false;
 	}
 
-	if (isSensorOk && !s_sensor->ReadFrame(s_getDepth, s_getImage, s_isWebplayer)) {
-		// No new data
-		newDataAvailable = false;
+	if (isSensorOk && s_sensor->ReadFrame(s_getDepth, s_getImage, s_isWebplayer)) {
+		// New data!!!
+		newDataAvailable = true;
 	}
 
 	for(std::list<ZigJSAPIWeakPtr>::iterator i = s_listeners.begin(); i != s_listeners.end(); ) {
@@ -85,7 +85,7 @@ void ZigJS::ReadFrame(void *)
 				if (isSensorOk != wasSensorConnected) {
 					realPtr->onStatusChange(isSensorOk);
 				}
-				if (newDataAvailable) {
+				if (isSensorOk && newDataAvailable) {
 					if (s_getImage) {
 						//realPtr->unregisterAttribute("imageMap");
 						realPtr->setImageMap(s_sensor->GetImage());

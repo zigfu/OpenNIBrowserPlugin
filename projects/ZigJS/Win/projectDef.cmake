@@ -69,6 +69,8 @@ set(WIX_HEAT_FLAGS
     -dr INSTALLDIR      # Set the directory ID to put the files in
     )
 
+# my change to make the msi name include the version string
+set(FB_WIX_DEST ${FB_BIN_DIR}/${PLUGIN_NAME}/${CMAKE_CFG_INTDIR}/${PLUGIN_NAME}v${FBSTRING_PLUGIN_VERSION}.msi)
 add_wix_installer( ${PLUGIN_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/Win/WiX/ZigJSInstaller.wxs
     PluginDLLGroup

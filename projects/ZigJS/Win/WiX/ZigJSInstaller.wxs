@@ -17,6 +17,8 @@
         </InstallExecuteSequence>
         <Media Id="1" Cabinet="${PLUGIN_NAME}.cab" EmbedCab="yes" />
 
+        <Icon Id="icon.exe" SourceFile="${CMAKE_CURRENT_SOURCE_DIR}/icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="icon.exe" />
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="${FB_WIX_INSTALL_LOCATION}">
                 <Directory Id="CompanyDir" Name="${COMPANY_NAME}">

@@ -150,9 +150,9 @@ static const char * verificationFunction = "var plugins = document.getElementsBy
 "    var item = document.elementFromPoint(wmX, wmY);"
 "    if (item != wm && (item.parentNode != wm) && (item.parentNode.parentNode != wm)) {"
 //TODO: compile log only in debug mode
-//#ifdef _DEBUG
+#ifdef _DEBUG
 "        console.log('invalidating because invisible'); console.log(wm); console.log(document.elementFromPoint(wmX, wmY));"
-//#endif
+#endif
 "        o.invalidate();"
 "    } else {"
 "        o.validate(%1%);" // %1% will be set to m_token

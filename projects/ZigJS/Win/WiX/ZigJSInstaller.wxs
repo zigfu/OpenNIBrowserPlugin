@@ -68,7 +68,14 @@
             </Directory>
         </Directory>
 
-        <Feature Id="MainPluginFeature" Title="${FBSTRING_ProductName}" Level="1">
+      <UIRef Id="WixUI_Minimal"/>
+      <WixVariable Id="WixUILicenseRtf" Value="${CMAKE_CURRENT_SOURCE_DIR}/license.rtf"/>
+      <!-- this should be a by bmp-->
+      <!--<WixVariable Id="WixUIBannerBmp" Value="${CMAKE_CURRENT_SOURCE_DIR}/neonBG.bmp"/>-->
+      <!-- this should be a 204x389 bmp-->
+      <!--<WixVariable Id="WixUIDialogBmp" Value="${CMAKE_CURRENT_SOURCE_DIR}/neonFirstScreen.bmp"/>-->
+
+      <Feature Id="MainPluginFeature" Title="${FBSTRING_ProductName}" Level="1">
             <ComponentRef Id="InstallDirComp"/>
             <ComponentRef Id="PluginNameDirComp"/>
             <ComponentRef Id="CompanyDirComp"/>

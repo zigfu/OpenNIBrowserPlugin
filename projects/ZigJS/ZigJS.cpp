@@ -46,7 +46,7 @@ void ZigJS::ReadFrame(void *)
 	// releasing quickly :(
 	static bool wasSensorConnected = false;
 	bool isSensorOk = true;
-	bool newDataAvailable = false;
+	bool newDataAvailable = true;
 	// try reopening the sensor
 	if (!s_sensor) {
 		isSensorOk = false;

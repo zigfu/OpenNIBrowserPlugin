@@ -711,7 +711,14 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 			}
 		}
 		//m_depthJS.reset(); // needed to stop memory leak
+#ifdef _WIN32
+		// On windows, this works and doesn't leak memory
+		// on mac, this crashes (even if I give make_variant a blank std::wstring(10000,'a') for example)
 		m_depthJS.assign(FB::make_variant(m_depthBuffer));
+#else
+		// On Mac, this works just fine. On windows, this leaks m_depthBuffer's worth of RAM.
+		m_depthJS = FB::make_variant(m_depthBuffer);
+#endif
 
 	} // if (updateDepth)
 	if (updateImage) {
@@ -751,7 +758,14 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 			}
 		}
 		//m_imageJS.reset(); //needed to stop memory leak
+#ifdef _WIN32
+		// On windows, this works and doesn't leak memory
+		// on mac, this crashes (even if I give make_variant a blank std::wstring(10000,'a') for example)
 		m_imageJS.assign(FB::make_variant(m_imageBuffer));
+#else
+		// On Mac, this works just fine. On windows, this leaks m_imageBuffer's worth of RAM.
+		m_imageJS = FB::make_variant(m_imageBuffer);
+#endif
 	}// if (updateImage)
 	Json::Value pluginData;
 	pluginData["hands"] = MakeHandsJsonList();

@@ -25,3 +25,4 @@ bin
 
 !src/3rdParty/boost/boost/preprocessor/debug/
 !src/3rdParty/boost/boost/spirit/home/classic/debug/
+*.wixobj

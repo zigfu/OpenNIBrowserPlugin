@@ -147,11 +147,15 @@ static const char * verificationFunction = "var plugins = document.getElementsBy
 "    var rect = wm.getBoundingClientRect();"
 "    var wmX = Math.floor(rect.left + (rect.width/2));"
 "    var wmY = Math.floor(rect.top + (rect.height/2));"
-"    var item = document.elementFromPoint(wmX, wmY);"
-"    if (item != wm && (item.parentNode != wm) && (item.parentNode.parentNode != wm)) {"
+//"    var item = document.elementFromPoint(wmX, wmY);"
+//"    if (item != wm && (item.parentNode != wm) && (item.parentNode.parentNode != wm)) {"
+// innerHTML-based comparison 
+//"    var item = document.elementFromPoint(wmX, wmY);var wmh = wm.innerHTML"
+//"    if (item.innerHTML != wmh && (item.parentNode.innerHTML != wmh) && (item.parentNode.parentNode.innerHTML != wmh)) {"
 //TODO: compile log only in debug mode
 #ifdef _DEBUG
-"        console.log('invalidating because invisible'); console.log(wm); console.log(document.elementFromPoint(wmX, wmY));"
+"        console.log('invalidating because invisible'); console.log(wm); console.log(item); console.log(item.parentNode); console.log(item.parentNode.parentNode);"
+"		 console.log(this);"
 #endif
 "        o.invalidate();"
 "    } else {"

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Bundle Name="ZigFu ZigJS OpenNI Bundle" Version="1.0.0.0" Manufacturer="ZigFu" UpgradeCode="DB47C37E-03DC-43D8-B770-C2C9D82CA305" IconSourceFile="../icon.ico">
+		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense" />
+		<WixVariable Id="WixStdbaLicenseRtf" Value="../license.rtf" />
+	    <!--<WixVariable Id="WixStdbaLogo" Value="../neonsquare.bmp"/>-->
+		<Chain>
+			<MsiPackage Id="OpenNI" SourceFile="openni-win32-1.5.2.23-dev.msi" />
+			<MsiPackage SourceFile="nite-win32-1.5.2.21-dev.msi" />
+			<MsiPackage SourceFile="sensor-win32-5.1.0.41-redist.msi" />
+			<MsiPackage SourceFile="SensorKinect091-Bin-Win32-v5.1.0.25.msi" />
+			<ExePackage SourceFile="Refresh_Environment.exe" Name="Refresh_Environment.exe" PerMachine="yes" Permanent="no" Compressed="yes" Cache="no" Vital="no" Protocol="none" />
+			<!-- we expect build*.bat to set ZIGJSMSI to point to the right MSI -->
+			<MsiPackage SourceFile="$(env.ZIGJSMSI)" />
+		</Chain>
+</Bundle>
+</Wix>

@@ -113,11 +113,35 @@ Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 
 	//TODO: make a nicer watermark
 	FB::DOM::ElementPtr body = browserPtr->getDOMDocument()->getBody();
-	m_element = browserPtr->getDOMDocument()->callMethod<FB::JSObjectPtr>("createElement", FB::variant_list_of("div"));
-	m_element->SetProperty("innerHTML", watermarkHTML);
-	//TODO: sorry :(
-	FB::DOM::Node::create(m_element)->getProperty<FB::JSObjectPtr>("style")->SetProperty("cssText", watermarkStyle);
-	body->callMethod<void>("appendChild", FB::variant_list_of(m_element));
+	FB::DOM::DocumentPtr doc = browserPtr->getDOMDocument();
+	if (!doc) {
+		m_ok = false;
+		browserPtr->htmlLog("doc invalid on add watermark :(");
+		return;
+	}
+	try {
+		browserPtr->htmlLog("wm: creating element");
+		FB::DOM::ElementPtr elem;
+		elem = doc->createElement("div");//doc->callMethod<FB::JSObjectPtr>("createElement", FB::variant_list_of("div"));
+		m_element = elem->getJSObject();
+		if (!m_element) {
+			m_ok = false;
+			browserPtr->htmlLog("element is bad :(");
+			return;
+		}
+
+		browserPtr->htmlLog("wm: appending child");
+		body->appendChild(elem);
+
+		//TODO: sorry :(
+		browserPtr->htmlLog("wm: setting style");
+		elem->getProperty<FB::JSObjectPtr>("style")->SetProperty("cssText", watermarkStyle);
+		browserPtr->htmlLog("wm: setting innerHTML");
+		m_element->SetProperty("innerHTML", watermarkHTML);
+	} catch(const FB::script_error& ex) {
+		browserPtr->htmlLog(ex.what());
+		m_ok = false;
+	}
 }
 Watermark::~Watermark()
 {

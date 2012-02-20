@@ -7,37 +7,42 @@
 using namespace boost::assign;
 
 // TODO: MOVE OUT OF HERE
-//static const char* base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+static const char* base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 //
-//boost::shared_ptr<std::string> base64_encode(const char * dp, unsigned int size)
-//{
-//  boost::shared_ptr<std::string> output = boost::make_shared<std::string>("data:image/bmp;base64,");
-//  std::string& outdata = *output;
-//  outdata.reserve((outdata.size()) + ((size * 8) / 6) + 2);
-//  std::string::size_type remaining = size;
-//
-//  while (remaining >= 3) {
-//    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
-//    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
-//    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)]);
-//    outdata.push_back(base64_charset[(dp[2] & 0x3f)]);
-//    remaining -= 3; dp += 3;
-//  }
-//  
-//  if (remaining == 2) {
-//    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
-//    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]); 
-//    outdata.push_back(base64_charset[((dp[1] & 0x0f) << 2)]);
-//    outdata.push_back(base64_charset[64]);
-//  } else if (remaining == 1) {
-//    outdata.push_back(base64_charset[(dp[0] & 0xfc) >> 2]);
-//    outdata.push_back(base64_charset[((dp[0] & 0x03) << 4)]); 
-//    outdata.push_back(base64_charset[64]);
-//    outdata.push_back(base64_charset[64]);
-//  }
-//
-//  return output;
-//}
+void base64_encode(std::string& outbuffer, const char * dp, unsigned int size)
+{
+  std::string::size_type remaining = size;
+  int i = 0;
+  while (remaining >= 3) {
+    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
+    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
+    outbuffer[i+2] = base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)];
+    outbuffer[i+3] = base64_charset[(dp[2] & 0x3f)];
+    remaining -= 3; dp += 3; i+=4;
+  }
+  
+  if (remaining == 2) {
+    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
+    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
+    outbuffer[i+2] = base64_charset[(dp[1] & 0x0f) << 2];
+    outbuffer[i+3] = base64_charset[64];
+  } else if (remaining == 1) {
+    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
+    outbuffer[i+1] = base64_charset[(dp[0] & 0x03) << 4]; 
+    outbuffer[i+2] = base64_charset[64];
+    outbuffer[i+3] = base64_charset[64];
+  }
+
+}
+
+inline static void b64_encode_triplet(std::string& out, int pos, unsigned char d1, unsigned char d2, unsigned char d3)
+{
+    out[pos] = base64_charset[d1 >> 2];
+    out[pos+1] = base64_charset[((d1 & 0x03) << 4) | (d2 >> 4)]; 
+    out[pos+2] = base64_charset[((d2 & 0x0f) << 2) | (d3 >> 6)];
+    out[pos+3] = base64_charset[d3 & 0x3f];
+}
+
 //
 //
 //// instead of understanding the format, we'll just replace the data from existing valid BMPs
@@ -702,11 +707,36 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 				}
 			}
 		} else {
+			//for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+			//	const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
+			//	for(XnUInt32 x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
+			//		m_depthBuffer[x + y*MAP_XRES*2] = (*p);
+			//		m_depthBuffer[x + 1 + y*MAP_XRES*2] = (*p) >> 8;
+			//	}
+			//}
+
+			//assuming total number of pixels will always divide by 3 (works for 4x3 and 16x9 aspect ratios)
+			int outputIndex = 0;
+			int outputState = 0;
+			unsigned char b1,b2;
 			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
 				const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
-				for(XnUInt32 x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
-					m_depthBuffer[x + y*MAP_XRES*2] = (*p);
-					m_depthBuffer[x + 1 + y*MAP_XRES*2] = (*p) >> 8;
+				for(XnUInt32 x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+					switch(outputState % 3) {
+						case 0:
+							b1 = *p;
+							b2 = (*p) >> 8;
+							break;
+						case 1:
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, *p);
+							outputIndex += 4;
+							b1 = (*p) >> 8;
+							break;
+						case 2:
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, *p, (*p) >> 8);
+							outputIndex += 4;
+							break;
+					}
 				}
 			}
 		}
@@ -742,20 +772,33 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 				}
 			}
 		} else {
+			//for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+			//	// get start-of-line read pointer
+			//	const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
+			//	// unrolled for two pixels (3 characters)
+			//	// x is in characters (it's used for output)
+			//	for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
+			//		unsigned char r = p[0];
+			//		unsigned char g = p[1];
+			//		unsigned char b = p[2];
+			//		m_imageBuffer[x + y*MAP_XRES*3] = r;
+			//		m_imageBuffer[x + 1 + y*MAP_XRES*3] = g;
+			//		m_imageBuffer[x + 2 + y*MAP_XRES*3] = b;
+			//	}
+			//}
 			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
 				// get start-of-line read pointer
 				const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
 				// unrolled for two pixels (3 characters)
 				// x is in characters (it's used for output)
-				for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
+				for(XnUInt32 x = 0; x < MAP_XRES * 4; x+=4, p += xRatio*3) {
 					unsigned char r = p[0];
 					unsigned char g = p[1];
 					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = r;
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = g;
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = b;
+					b64_encode_triplet(m_imageBuffer, x + y*MAP_XRES*4, r,g,b);
 				}
 			}
+			
 		}
 		//m_imageJS.reset(); //needed to stop memory leak
 #ifdef _WIN32

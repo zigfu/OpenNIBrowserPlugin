@@ -34,3 +34,5 @@ void Sensor::Init()
 	if (SensorOpenNI::Available()) SensorOpenNI::Init();
 	if (SensorKinectSDK::Available()) SensorKinectSDK::Init();
 }
+
+const char * Sensor::base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";

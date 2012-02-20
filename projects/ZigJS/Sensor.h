@@ -40,6 +40,19 @@ protected:
 	FB::variant m_depthJS;
 	std::string m_imageBuffer;
 	std::string m_depthBuffer;
+
+
+	//base64 stuff
+	//TODO: move to separate file
+	static const char* base64_charset;
+	inline static void b64_encode_triplet(std::string& out, int pos, unsigned char d1, unsigned char d2, unsigned char d3)
+	{
+		out[pos] = base64_charset[d1 >> 2];
+		out[pos+1] = base64_charset[((d1 & 0x03) << 4) | (d2 >> 4)]; 
+		out[pos+2] = base64_charset[((d2 & 0x0f) << 2) | (d3 >> 6)];
+		out[pos+3] = base64_charset[d3 & 0x3f];
+	}
+
 };
 
 

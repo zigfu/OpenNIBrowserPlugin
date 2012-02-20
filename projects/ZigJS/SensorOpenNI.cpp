@@ -7,41 +7,34 @@
 using namespace boost::assign;
 
 // TODO: MOVE OUT OF HERE
-static const char* base64_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+ 
 //
-void base64_encode(std::string& outbuffer, const char * dp, unsigned int size)
-{
-  std::string::size_type remaining = size;
-  int i = 0;
-  while (remaining >= 3) {
-    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
-    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
-    outbuffer[i+2] = base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)];
-    outbuffer[i+3] = base64_charset[(dp[2] & 0x3f)];
-    remaining -= 3; dp += 3; i+=4;
-  }
-  
-  if (remaining == 2) {
-    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
-    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
-    outbuffer[i+2] = base64_charset[(dp[1] & 0x0f) << 2];
-    outbuffer[i+3] = base64_charset[64];
-  } else if (remaining == 1) {
-    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
-    outbuffer[i+1] = base64_charset[(dp[0] & 0x03) << 4]; 
-    outbuffer[i+2] = base64_charset[64];
-    outbuffer[i+3] = base64_charset[64];
-  }
+//void base64_encode(std::string& outbuffer, const char * dp, unsigned int size)
+//{
+//  std::string::size_type remaining = size;
+//  int i = 0;
+//  while (remaining >= 3) {
+//    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
+//    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
+//    outbuffer[i+2] = base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)];
+//    outbuffer[i+3] = base64_charset[(dp[2] & 0x3f)];
+//    remaining -= 3; dp += 3; i+=4;
+//  }
+//  
+//  if (remaining == 2) {
+//    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
+//    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
+//    outbuffer[i+2] = base64_charset[(dp[1] & 0x0f) << 2];
+//    outbuffer[i+3] = base64_charset[64];
+//  } else if (remaining == 1) {
+//    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
+//    outbuffer[i+1] = base64_charset[(dp[0] & 0x03) << 4]; 
+//    outbuffer[i+2] = base64_charset[64];
+//    outbuffer[i+3] = base64_charset[64];
+//  }
+//
+//}
 
-}
-
-inline static void b64_encode_triplet(std::string& out, int pos, unsigned char d1, unsigned char d2, unsigned char d3)
-{
-    out[pos] = base64_charset[d1 >> 2];
-    out[pos+1] = base64_charset[((d1 & 0x03) << 4) | (d2 >> 4)]; 
-    out[pos+2] = base64_charset[((d2 & 0x0f) << 2) | (d3 >> 6)];
-    out[pos+3] = base64_charset[d3 & 0x3f];
-}
 
 //
 //
@@ -707,15 +700,19 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 				}
 			}
 		} else {
-			//for(XnUInt32 y = 0; y < MAP_YRES; y++) {
-			//	const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
-			//	for(XnUInt32 x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
-			//		m_depthBuffer[x + y*MAP_XRES*2] = (*p);
-			//		m_depthBuffer[x + 1 + y*MAP_XRES*2] = (*p) >> 8;
-			//	}
-			//}
 
-			//assuming total number of pixels will always divide by 3 (works for 4x3 and 16x9 aspect ratios)
+			// base64 encode + downscale loop follows. Here's some info about it:
+			// I'm assuming total number of pixels will always divide by 3 (works for 4x3 and 16x9 aspect ratios)
+			// so as not to have special code for the end of the input.
+			// base64 encodes 6 bits to 8 bits, so to fall on whole-byte boundaries, it's 3 input bytes into 4 characters
+			// Every depth pixel is two bytes, so 3 pixels = 6 input bytes = 8 output characters
+			// but, the catch is that the number of pixels in a row does not divide by 3
+			// so I keep a pixel count (outputState), and so for every pixel I read, the behavior is:
+			// if it's the first pixel (outputState % 3 == 0), store the two input bytes (in b1, b2)
+			// if it's the second, use the two stored bytes from last iteration and the LSB of the current
+			// pixel as a triplet, and store the MSB of the pixel in b1
+			// if it's the third, use b1 and the two bytes of the pixel for a triplet
+
 			int outputIndex = 0;
 			int outputState = 0;
 			unsigned char b1,b2;
@@ -724,16 +721,16 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 				for(XnUInt32 x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
 					switch(outputState % 3) {
 						case 0:
-							b1 = *p;
-							b2 = (*p) >> 8;
+							b1 = (unsigned char)(*p);
+							b2 = (unsigned char)((*p) >> 8);
 							break;
 						case 1:
-							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, *p);
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)(*p));
 							outputIndex += 4;
 							b1 = (*p) >> 8;
 							break;
 						case 2:
-							b64_encode_triplet(m_depthBuffer, outputIndex, b1, *p, (*p) >> 8);
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)(*p), (unsigned char)((*p) >> 8));
 							outputIndex += 4;
 							break;
 					}
@@ -772,20 +769,6 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 				}
 			}
 		} else {
-			//for(XnUInt32 y = 0; y < MAP_YRES; y++) {
-			//	// get start-of-line read pointer
-			//	const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
-			//	// unrolled for two pixels (3 characters)
-			//	// x is in characters (it's used for output)
-			//	for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
-			//		unsigned char r = p[0];
-			//		unsigned char g = p[1];
-			//		unsigned char b = p[2];
-			//		m_imageBuffer[x + y*MAP_XRES*3] = r;
-			//		m_imageBuffer[x + 1 + y*MAP_XRES*3] = g;
-			//		m_imageBuffer[x + 2 + y*MAP_XRES*3] = b;
-			//	}
-			//}
 			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
 				// get start-of-line read pointer
 				const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);

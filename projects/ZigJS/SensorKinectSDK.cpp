@@ -211,11 +211,6 @@ bool SensorKinectSDK::Valid() const {
 	return m_initialized && (!m_error);
 }
 
-//boost::shared_ptr< FB::variant > SensorKinectSDK::GetImageBase64() const
-//{
-//	return boost::make_shared< FB::variant >();
-//}
-
 static bool getOrientation(NUI_SKELETON_DATA * skeleton, int joint, float  orientation[9])
 {
 	Matrix3f result; 
@@ -445,12 +440,29 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 				}
 			}
 		} else {
+			// base64 encoding. see the equivalent code in SensorOpenNI.cpp for a more detailed explanation
+			// of how this works
+			int outputIndex = 0;
+			int outputState = 0;
+			unsigned char b1,b2;
 			for(int y = 0; y < MAP_YRES; y++) {
 				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
-				for(int x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
-					unsigned short pixel = (*p) >> 3;
-					m_depthBuffer[x + y*MAP_XRES*2] = pixel;
-					m_depthBuffer[x + 1 + y*MAP_XRES*2] = pixel >> 8;
+				for(int x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+					switch(outputState % 3) {
+						case 0:
+							b1 = (unsigned char)(*p);
+							b2 = (unsigned char)((*p) >> 8);
+							break;
+						case 1:
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)(*p));
+							outputIndex += 4;
+							b1 = (*p) >> 8;
+							break;
+						case 2:
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)(*p), (unsigned char)((*p) >> 8));
+							outputIndex += 4;
+							break;
+					}
 				}
 			}
 		}
@@ -493,13 +505,12 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 			for(int y = 0; y < MAP_YRES; y++) {
 				// get start-of-line read pointer
 				const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
-				for(int x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*4) {
+				for(int x = 0; x < MAP_XRES * 4; x+=4, p += xRatio*4) {
 					unsigned char r = p[0];
 					unsigned char g = p[1];
 					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = r;
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = g;
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = b;
+					b64_encode_triplet(m_imageBuffer, x + y*MAP_XRES*4, r,g,b);
+
 				}
 			}
 		}

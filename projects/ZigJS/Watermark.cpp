@@ -14,8 +14,9 @@
 // 15 seconds without verification is the max we allow
 const boost::posix_time::time_duration Watermark::MaxDurationBetweenVerifications = boost::posix_time::time_duration(0, 0, 15, 0);
 
-static const char watermarkHTML[] = "<a href='http://site.zigfu.com/main/watermark'><img src='data:image/png;base64,"
-	"iVBORw0KGgoAAAANSUhEUgAAAG8AAABICAMAAADPslvcAAAAAXNSR0IArs4c6QAAAARnQU1BAACx"
+// note that the <img> has style='border : none;' because IE otherwise adds a blue border around the image because it's a link
+static const char watermarkHTML[] = "<a href='http://site.zigfu.com/main/watermark'><img style='border : none;' alt='Powered by Zigfu' src='data:image/png;base64,"
+"iVBORw0KGgoAAAANSUhEUgAAAG8AAABICAMAAADPslvcAAAAAXNSR0IArs4c6QAAAARnQU1BAACx"
 "jwv8YQUAAAMAUExURQEBAgUGCAUICggKDQAFEwMMEwINGgsNEQgOHAUQFgQRGw0QFQwSGhIPEhAR"
 "ExEVHBUYHRsUExwWGhoZHgAOIwERIwETLAcYKAwUIg0YIw0ZKhIWIRUZIhQcKhgcJRkeKRMeMBYg"
 "LBwgJRwhLRQhNRUlOB4kMRslOB8oOCMYGjYdFiMdIjIcIDsnGyMkKiAmMyAnOCIoNiUrOyktNCgu"
@@ -116,11 +117,11 @@ Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 	FB::DOM::DocumentPtr doc = browserPtr->getDOMDocument();
 	if (!doc) {
 		m_ok = false;
-		browserPtr->htmlLog("doc invalid on add watermark :(");
+		//browserPtr->htmlLog("doc invalid on add watermark :(");
 		return;
 	}
 	try {
-		browserPtr->htmlLog("wm: creating element");
+		//browserPtr->htmlLog("wm: creating element");
 		FB::DOM::ElementPtr elem;
 		elem = doc->createElement("div");//doc->callMethod<FB::JSObjectPtr>("createElement", FB::variant_list_of("div"));
 		m_element = elem->getJSObject();
@@ -130,13 +131,13 @@ Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 			return;
 		}
 
-		browserPtr->htmlLog("wm: appending child");
+		//browserPtr->htmlLog("wm: appending child");
 		body->appendChild(elem);
 
 		//TODO: sorry :(
-		browserPtr->htmlLog("wm: setting style");
+		//browserPtr->htmlLog("wm: setting style");
 		elem->getProperty<FB::JSObjectPtr>("style")->SetProperty("cssText", watermarkStyle);
-		browserPtr->htmlLog("wm: setting innerHTML");
+		//browserPtr->htmlLog("wm: setting innerHTML");
 		m_element->SetProperty("innerHTML", watermarkHTML);
 	} catch(const FB::script_error& ex) {
 		browserPtr->htmlLog(ex.what());

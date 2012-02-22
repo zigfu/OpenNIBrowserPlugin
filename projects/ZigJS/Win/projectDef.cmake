@@ -45,7 +45,7 @@ include_directories(SYSTEM
 # source control!
 # -- uncomment lines below this to enable signing --
 firebreath_sign_plugin(${PROJECT_NAME}
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../../codesign/zigcert.pfx"
+    "${CMAKE_CURRENT_SOURCE_DIR}/zigcert.pfx"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../codesign/passphrase.txt"
     "http://timestamp.digicert.com/")
 
@@ -83,6 +83,6 @@ add_wix_installer( ${PLUGIN_NAME}
 # -- uncomment lines below this to enable signing --
 firebreath_sign_file("${PLUGIN_NAME}_WiXInstall"
     "${FB_BIN_DIR}/${PLUGIN_NAME}/${CMAKE_CFG_INTDIR}/${PLUGIN_NAME}v${FBSTRING_PLUGIN_VERSION}.msi"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../../codesign/zigcert.pfx"
+    "${CMAKE_CURRENT_SOURCE_DIR}/zigcert.pfx"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../codesign/passphrase.txt"
     "http://timestamp.digicert.com/")

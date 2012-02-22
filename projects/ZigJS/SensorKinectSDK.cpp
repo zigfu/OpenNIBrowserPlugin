@@ -448,18 +448,19 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 			for(int y = 0; y < MAP_YRES; y++) {
 				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
 				for(int x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+					unsigned short pixel = (*p) >> 3;
 					switch(outputState % 3) {
 						case 0:
-							b1 = (unsigned char)(*p);
-							b2 = (unsigned char)((*p) >> 8);
+							b1 = (unsigned char)(pixel);
+							b2 = (unsigned char)(pixel >> 8);
 							break;
 						case 1:
-							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)(*p));
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)pixel);
 							outputIndex += 4;
-							b1 = (*p) >> 8;
+							b1 = pixel >> 8;
 							break;
 						case 2:
-							b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)(*p), (unsigned char)((*p) >> 8));
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)pixel, (unsigned char)(pixel >> 8));
 							outputIndex += 4;
 							break;
 					}
@@ -571,6 +572,7 @@ void SensorKinectSDK::convertWorldToImageSpace(std::vector<double>& points)
 {
 	int iteration_count = points.size()/3;
 	for(int i = 0; i < iteration_count; i++) {
+		//convert to kinect-space (units are meters, not millimeters)
 		Vector4 input = {
 			points[i*3]/1000,
 			points[i*3 + 1]/1000,
@@ -579,8 +581,11 @@ void SensorKinectSDK::convertWorldToImageSpace(std::vector<double>& points)
 		};
 		float outX, outY;
 		NuiTransformSkeletonToDepthImage(input, &outX, &outY);
-		points[i*3] = outX;
-		points[i*3+1] = outY;
+		// convert from kinect resolution (DEPTH_MAP_WIDHT/HEIGHT) to output resolution (MAP_XRES/YRES)
+		// (assume it's always upscaling by a whole number for now)
+		points[i*3] = outX * (DEPTH_MAP_WIDTH / MAP_XRES); 
+		points[i*3+1] = outY * (DEPTH_MAP_HEIGHT / MAP_YRES);
+		// Z stays the same
 	}
 }
 
@@ -588,10 +593,12 @@ void SensorKinectSDK::convertImageToWorldSpace(std::vector<double>& points)
 {
 	int iteration_count = points.size()/3;
 	for(int i = 0; i < iteration_count; i++) {
-		Vector4 output = NuiTransformDepthImageToSkeleton(points[i*3],
-			points[i*3 + 1],
-			((unsigned short)points[i*3 + 2]) << 3);
+		// convert to kinect image space from plugin output image space
 
+		Vector4 output = NuiTransformDepthImageToSkeleton(points[i*3]*(((double)MAP_XRES) / DEPTH_MAP_WIDTH),
+			points[i*3 + 1]*(((double)MAP_YRES) / DEPTH_MAP_HEIGHT),
+			((unsigned short)points[i*3 + 2]) << 3);
+		// transform x,y from kinect skeleton-space to universal world-space (from meters to millimeters)
 		points[i*3] = output.x*1000;
 		points[i*3+1] = output.y*1000;
 	}

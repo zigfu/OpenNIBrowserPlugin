@@ -844,11 +844,37 @@ bool SensorOpenNI::Init()
 
 void SensorOpenNI::convertWorldToImageSpace(std::vector<double>& points)
 {
-	xnConvertRealWorldToProjective(m_depth, points.size()/3, (XnPoint3D *)points.data(), (XnPoint3D *)points.data());
+	if (!m_pDepthMD) return; // we need it
+	float actualToOutputRatio = m_pDepthMD->pMap->FullRes.X / MAP_XRES;
+	std::vector<XnPoint3D> pts(points.size()/3);
+	for(int i = 0; i < pts.size(); i++) {
+		pts[i].X = points[i*3];
+		pts[i].Y = points[i*3+1];
+		pts[i].Z = points[i*3+2];
+	}
+	xnConvertRealWorldToProjective(m_depth, pts.size(), pts.data(), pts.data());
+	for(int i = 0; i < pts.size(); i++) {
+		points[i*3] = pts[i].X * actualToOutputRatio;
+		points[i*3+1] = pts[i].Y * actualToOutputRatio;
+		//points[i*3+2] = pts[i].Z * actualToOutputRatio; // Z stays the same, no need to overwrite
+	}
 }
 
 
 void SensorOpenNI::convertImageToWorldSpace(std::vector<double>& points)
 {
-	xnConvertProjectiveToRealWorld(m_depth, points.size()/3, (XnPoint3D *)points.data(), (XnPoint3D *)points.data());
+	if (!m_pDepthMD) return; // we need it
+	float inputToActualRatio = MAP_XRES / m_pDepthMD->pMap->FullRes.X;
+	std::vector<XnPoint3D> pts(points.size()/3);
+	for(int i = 0; i < pts.size(); i++) {
+		pts[i].X = points[i*3] * inputToActualRatio;
+		pts[i].Y = points[i*3+1] * inputToActualRatio;
+		pts[i].Z = points[i*3+2] * inputToActualRatio;
+	}
+	xnConvertProjectiveToRealWorld(m_depth, pts.size(), pts.data(), pts.data());
+	for(int i = 0; i < pts.size(); i++) {
+		points[i*3] = pts[i].X;
+		points[i*3+1] = pts[i].Y;
+		//points[i*3+2] = pts[i].Z; // Z stays the same, no need to overwrite
+	}
 }

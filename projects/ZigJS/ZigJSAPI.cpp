@@ -216,17 +216,9 @@ bool ZigJSAPI::get_sensorConnected()
 	return ZigJS::IsSensorConnected();
 }
 
-FB::VariantList ZigJSAPI::convertWorldToImageSpace(std::vector<double>& points)
+FB::VariantList ZigJSAPI::convertWorldToImageSpace(const std::vector<double>& points)
 {
-	//in-place conversion
-	ZigJS::ConvertWorldToImageSpace(points);
-	FB::VariantList output(points.size());
-	int outIndex = 0;
-	// was cbegin(), cend() but mac doesn't have C++11 stuff in STL
-	for(std::vector<double>::const_iterator i = points.begin(); i != points.end(); i++, outIndex++) {
-		output[outIndex] = *i;
-	}
-	return output;
+	return ZigJS::ConvertWorldToImageSpace(points);
 }
 
 //std::vector<double> ZigJSAPI::convertImageToWorldSpace(std::vector<double> points)
@@ -236,15 +228,7 @@ FB::VariantList ZigJSAPI::convertWorldToImageSpace(std::vector<double>& points)
 //	return points; //copy
 //}
 //std::vector<double> ZigJSAPI::convertImageToWorldSpace(const FB::VariantList& points)
-FB::VariantList ZigJSAPI::convertImageToWorldSpace(std::vector<double>& points)
+FB::VariantList ZigJSAPI::convertImageToWorldSpace(const std::vector<double>& points)
 {
-	//in-place conversion
-	ZigJS::ConvertImageToWorldSpace(points);
-	FB::VariantList output(points.size());
-	int outIndex = 0;
-	// was cbegin(), cend() but mac doesn't have C++11 stuff in STL
-	for(std::vector<double>::const_iterator i = points.begin(); i != points.end(); i++, outIndex++) {
-		output[outIndex] = *i;
-	}
-	return output;
+	return ZigJS::ConvertImageToWorldSpace(points);
 }

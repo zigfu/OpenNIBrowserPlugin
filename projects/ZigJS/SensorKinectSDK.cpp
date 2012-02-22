@@ -568,8 +568,9 @@ const std::string& SensorKinectSDK::GetEventData() const {
 	return m_lastFrameData;
 }
 
-void SensorKinectSDK::convertWorldToImageSpace(std::vector<double>& points)
+FB::VariantList SensorKinectSDK::convertWorldToImageSpace(const std::vector<double>& points)
 {
+	FB::VariantList vl((points.size()/3)*3);
 	int iteration_count = points.size()/3;
 	for(int i = 0; i < iteration_count; i++) {
 		//convert to kinect-space (units are meters, not millimeters)
@@ -583,24 +584,29 @@ void SensorKinectSDK::convertWorldToImageSpace(std::vector<double>& points)
 		NuiTransformSkeletonToDepthImage(input, &outX, &outY);
 		// convert from kinect resolution (DEPTH_MAP_WIDHT/HEIGHT) to output resolution (MAP_XRES/YRES)
 		// (assume it's always upscaling by a whole number for now)
-		points[i*3] = outX * (DEPTH_MAP_WIDTH / MAP_XRES); 
-		points[i*3+1] = outY * (DEPTH_MAP_HEIGHT / MAP_YRES);
+		vl[i*3] = outX * (MAP_XRES / DEPTH_MAP_WIDTH); 
+		vl[i*3 + 1] = outY * (MAP_YRES / DEPTH_MAP_HEIGHT);
+		vl[i*3 + 2] = points[i*3 + 2]; // no need to scale Z
 		// Z stays the same
 	}
+	return vl;
 }
 
-void SensorKinectSDK::convertImageToWorldSpace(std::vector<double>& points)
+FB::VariantList SensorKinectSDK::convertImageToWorldSpace(const std::vector<double>& points)
 {
+	FB::VariantList vl((points.size()/3)*3);
 	int iteration_count = points.size()/3;
 	for(int i = 0; i < iteration_count; i++) {
 		// convert to kinect image space from plugin output image space
 
-		Vector4 output = NuiTransformDepthImageToSkeleton(points[i*3]*(((double)MAP_XRES) / DEPTH_MAP_WIDTH),
-			points[i*3 + 1]*(((double)MAP_YRES) / DEPTH_MAP_HEIGHT),
+		Vector4 output = NuiTransformDepthImageToSkeleton(points[i*3]*(((double)DEPTH_MAP_WIDTH) / MAP_XRES),
+			points[i*3 + 1]*(((double)DEPTH_MAP_HEIGHT) / MAP_YRES),
 			((unsigned short)points[i*3 + 2]) << 3);
 		// transform x,y from kinect skeleton-space to universal world-space (from meters to millimeters)
-		points[i*3] = output.x*1000;
-		points[i*3+1] = output.y*1000;
+		vl[i*3] = output.x*1000;
+		vl[i*3+1] = output.y*1000;
+		vl[i*3+2] = points[i*3 + 2];
 	}
+	return vl;
 }
 #endif

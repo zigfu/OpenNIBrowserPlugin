@@ -155,17 +155,21 @@ bool ZigJS::IsSensorConnected()
 {
 	return (s_sensor) && (s_sensor->Valid());
 }
-void ZigJS::ConvertImageToWorldSpace(std::vector<double>& points)
+FB::VariantList ZigJS::ConvertImageToWorldSpace(const std::vector<double>& points)
 {
 	if (s_sensor) {
-		s_sensor->convertImageToWorldSpace(points);
+		return s_sensor->convertImageToWorldSpace(points);
 	}
+	//TODO: throw some exception instead?
+	return FB::VariantList();
 }
-void ZigJS::ConvertWorldToImageSpace(std::vector<double>& points)
+FB::VariantList ZigJS::ConvertWorldToImageSpace(const std::vector<double>& points)
 {
 	if (s_sensor) {
-		s_sensor->convertWorldToImageSpace(points);
+		return s_sensor->convertWorldToImageSpace(points);
 	}
+	//TODO: throw some exception instead?
+	return FB::VariantList();
 }
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn ZigJS::StaticInitialize()

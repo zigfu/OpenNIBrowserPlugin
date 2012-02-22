@@ -60,8 +60,8 @@ public:
 	void setDepthMap(const FB::variant& depthMap);
 	void setImageMap(const FB::variant& imageMap);
 
-	FB::VariantList convertWorldToImageSpace(std::vector<double>& points);
-	FB::VariantList convertImageToWorldSpace(std::vector<double>& points);
+	FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
+	FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);
 
 private:
 	ZigJSWeakPtr m_plugin;

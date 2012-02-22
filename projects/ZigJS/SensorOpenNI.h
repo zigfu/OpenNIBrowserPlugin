@@ -39,8 +39,8 @@ public:
 	bool Valid() const;
 	//boost::shared_ptr< FB::variant > GetImageBase64() const;
 	const std::string& GetEventData() const;
-	virtual void convertWorldToImageSpace(std::vector<double>& points);
-	virtual void convertImageToWorldSpace(std::vector<double>& points);
+	virtual FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
+	virtual FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);
 	static void Unload();
 	static bool Init();
 private:

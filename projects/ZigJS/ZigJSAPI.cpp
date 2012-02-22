@@ -50,6 +50,9 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	//registerMethod("test", make_method(this, &ZigJSAPI::Test));
 	registerMethod("validate", make_method(this, &ZigJSAPI::Validate));
 
+	registerMethod("convertImageToWorldSpace", make_method(this, &ZigJSAPI::convertImageToWorldSpace));
+	registerMethod("convertWorldToImageSpace", make_method(this, &ZigJSAPI::convertWorldToImageSpace));
+
 	// test every 7 secs or so
 	m_watermarkTimer = FB::Timer::getTimer(7000, true, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
 	m_watermarkTimer->start();
@@ -213,3 +216,33 @@ bool ZigJSAPI::get_sensorConnected()
 	return ZigJS::IsSensorConnected();
 }
 
+FB::VariantList ZigJSAPI::convertWorldToImageSpace(std::vector<double>& points)
+{
+	//in-place conversion
+	ZigJS::ConvertWorldToImageSpace(points);
+	FB::VariantList output(points.size());
+	int outIndex = 0;
+	for(std::vector<double>::const_iterator i = points.cbegin(); i != points.cend(); i++, outIndex++) {
+		output[outIndex] = *i;
+	}
+	return output;
+}
+
+//std::vector<double> ZigJSAPI::convertImageToWorldSpace(std::vector<double> points)
+//{
+//	//in-place conversion
+//	ZigJS::ConvertImageToWorldSpace(points);
+//	return points; //copy
+//}
+//std::vector<double> ZigJSAPI::convertImageToWorldSpace(const FB::VariantList& points)
+FB::VariantList ZigJSAPI::convertImageToWorldSpace(std::vector<double>& points)
+{
+	//in-place conversion
+	ZigJS::ConvertImageToWorldSpace(points);
+	FB::VariantList output(points.size());
+	int outIndex = 0;
+	for(std::vector<double>::const_iterator i = points.cbegin(); i != points.cend(); i++, outIndex++) {
+		output[outIndex] = *i;
+	}
+	return output;
+}

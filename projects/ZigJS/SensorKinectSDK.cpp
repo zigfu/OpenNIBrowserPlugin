@@ -567,4 +567,33 @@ const std::string& SensorKinectSDK::GetEventData() const {
 	return m_lastFrameData;
 }
 
+void SensorKinectSDK::convertWorldToImageSpace(std::vector<double>& points)
+{
+	int iteration_count = points.size()/3;
+	for(int i = 0; i < iteration_count; i++) {
+		Vector4 input = {
+			points[i*3]/1000,
+			points[i*3 + 1]/1000,
+			points[i*3 + 2]/1000,
+			1
+		};
+		float outX, outY;
+		NuiTransformSkeletonToDepthImage(input, &outX, &outY);
+		points[i*3] = outX;
+		points[i*3+1] = outY;
+	}
+}
+
+void SensorKinectSDK::convertImageToWorldSpace(std::vector<double>& points)
+{
+	int iteration_count = points.size()/3;
+	for(int i = 0; i < iteration_count; i++) {
+		Vector4 output = NuiTransformDepthImageToSkeleton(points[i*3],
+			points[i*3 + 1],
+			((unsigned short)points[i*3 + 2]) << 3);
+
+		points[i*3] = output.x*1000;
+		points[i*3+1] = output.y*1000;
+	}
+}
 #endif

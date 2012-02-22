@@ -841,3 +841,14 @@ bool SensorOpenNI::Init()
 	//TODO: write this code once xnUSBSetCallbackHandler is written for *nix
 	//xnUSBSetCallbackHandler
 }
+
+void SensorOpenNI::convertWorldToImageSpace(std::vector<double>& points)
+{
+	xnConvertRealWorldToProjective(m_depth, points.size()/3, (XnPoint3D *)points.data(), (XnPoint3D *)points.data());
+}
+
+
+void SensorOpenNI::convertImageToWorldSpace(std::vector<double>& points)
+{
+	xnConvertProjectiveToRealWorld(m_depth, points.size()/3, (XnPoint3D *)points.data(), (XnPoint3D *)points.data());
+}

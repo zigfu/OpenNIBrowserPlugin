@@ -20,6 +20,13 @@ public:
 	virtual bool Valid() const = 0;
 
 	virtual const std::string& GetEventData() const = 0;
+
+	// points are in/out, every three doubles are treated as x,y,z coordinates and modified in-place
+	virtual void convertWorldToImageSpace(std::vector<double>& points) = 0;
+	virtual void convertImageToWorldSpace(std::vector<double>& points) = 0;
+
+
+
 	//virtual const std::wstring& GetImage() {return std::wstring();}
 	// TODO: refactor
 	const FB::variant& GetImage() const { return m_imageJS; }

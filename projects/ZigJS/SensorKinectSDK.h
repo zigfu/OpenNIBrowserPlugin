@@ -18,7 +18,8 @@ public:
 	virtual ~SensorKinectSDK();
 
 	virtual bool ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer); //true if there is new data, false otherwise
-
+	virtual void convertWorldToImageSpace(std::vector<double>& points);
+	virtual void convertImageToWorldSpace(std::vector<double>& points);
 	virtual bool Valid() const;
 	virtual const std::string& GetEventData() const;
 	static void Unload();

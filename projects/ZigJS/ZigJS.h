@@ -49,6 +49,9 @@ public:
 	static void ReadFrame(void *);
 	static void TimerCallback();
 	static bool IsSensorConnected();
+
+	static void ConvertImageToWorldSpace(std::vector<double>& points);
+	static void ConvertWorldToImageSpace(std::vector<double>& points);
 public:
     ZigJS();
     virtual ~ZigJS();

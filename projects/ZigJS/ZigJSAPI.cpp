@@ -222,7 +222,8 @@ FB::VariantList ZigJSAPI::convertWorldToImageSpace(std::vector<double>& points)
 	ZigJS::ConvertWorldToImageSpace(points);
 	FB::VariantList output(points.size());
 	int outIndex = 0;
-	for(std::vector<double>::const_iterator i = points.cbegin(); i != points.cend(); i++, outIndex++) {
+	// was cbegin(), cend() but mac doesn't have C++11 stuff in STL
+	for(std::vector<double>::const_iterator i = points.begin(); i != points.end(); i++, outIndex++) {
 		output[outIndex] = *i;
 	}
 	return output;
@@ -241,7 +242,8 @@ FB::VariantList ZigJSAPI::convertImageToWorldSpace(std::vector<double>& points)
 	ZigJS::ConvertImageToWorldSpace(points);
 	FB::VariantList output(points.size());
 	int outIndex = 0;
-	for(std::vector<double>::const_iterator i = points.cbegin(); i != points.cend(); i++, outIndex++) {
+	// was cbegin(), cend() but mac doesn't have C++11 stuff in STL
+	for(std::vector<double>::const_iterator i = points.begin(); i != points.end(); i++, outIndex++) {
 		output[outIndex] = *i;
 	}
 	return output;

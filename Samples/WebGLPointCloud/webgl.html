@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -86,6 +84,40 @@
 		</script>
 
 		<script>
+			var codexStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+			var codexInt = [];
+			for(var i = 0; i < 256; i++) {
+				var idx = codexStr.indexOf(String.fromCharCode(i));
+				codexInt[i] = idx;
+			}
+			var Base64 =
+			{
+			    // assuming that the input string encodes a number of bytes divisible by 3
+			    decode : function (input)
+			    {
+			        var output = new Array(input.length*3/4);
+			        var inLength = input.length;
+			        var outIndex = 0;
+			        for (var i = 0; i < inLength; i += 4) {
+			            var enc1 = codexInt[input.charCodeAt(i)];
+			            var enc2 = codexInt[input.charCodeAt(i+1)];
+			            var enc3 = codexInt[input.charCodeAt(i+2)];
+			            var enc4 = codexInt[input.charCodeAt(i+3)];
+
+			            var chr1 = (enc1 << 2) | (enc2 >> 4);
+			            var chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+			            var chr3 = ((enc3 & 3) << 6) | enc4;
+			            
+
+			            output[outIndex] = chr1;
+			            output[outIndex+1] = chr2;
+			            output[outIndex+2] = chr3;
+			            outIndex += 3;
+			        }
+
+			        return output;
+			    }
+			}
 
 			var container;
 
@@ -109,12 +141,11 @@
 
 			function init() {
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
-
 				stats = new Stats();
 				stats.domElement.style.position = 'absolute';
 				stats.domElement.style.top = '0px';
+				container = document.createElement("div");
+				document.body.appendChild(container);
 				container.appendChild( stats.domElement );
 
 				scene = new THREE.Scene();
@@ -125,11 +156,12 @@
 				camera.position.set( 0, 0, 500 );
 				scene.add( camera );
 
-				texture = new THREE.Texture( new Image() );
+				canvas = document.createElement('canvas');  
+				texture = new THREE.Texture( canvas );
 				texture.minFilter = THREE.NearestFilter;
 				texture.magFilter = THREE.NearestFilter;
 
-				var width = 320, height = 240;
+				var width = 160, height = 120;
 				//var nearClipping = 850/*850*/, farClipping = 4000/*4000*/;
 				var nearClipping = 0/*850*/, farClipping = 10000/*4000*/;
 
@@ -208,48 +240,41 @@
 			}
 
 // My code
-		var mimeType = "application/x-zig";
-        var pluginCB = null;
-		
-        function plugin() {
-            return document.getElementById("testPlugin");
-        }
 
-        function injectPlugin(dest, callback) {
-            pluginCB = callback;
-            var html = '<object id="testPlugin" type="' + mimeType + '" width="100%" height="100%" onload="alert(\'The plugin has loaded 1!\');">';
-            html += '<param name="onload" value="pluginCB" />';
-            html += '</object>';
-            dest[0].innerHTML = html;
-        }
-		
-        function pageLoaded() {
-            injectPlugin($("#pluginContainer"), pluginLoaded);
-        }
-		
- 
         function pluginLoaded() {
 			
-			plugin().setImage(new Image());
-			plugin().addEventListener("NewFrame", function() { 
-				var img2 = new Image();
-				img2.onload = function() {
-					img2.onload = null; //break reference loop
-					if (texture) {
-						texture.image = img2;
-						texture.needsUpdate = true; 
-					}
-				};
-				plugin().setImage(img2);
+			var plugin = document.getElementById("ZigPlugin");
+			plugin.requestStreams(true, false, false);
+			plugin.addEventListener("NewFrame", function() { 
+				drawDM(plugin, canvas);
+				texture.needsUpdate = true;
 			}, false);
         }
 
-	
-        $(document).ready(pageLoaded);
+	    function drawDM(plugin, canvas) {
+			var dm = plugin.depthMap;
+			if (dm.length == 0) return;
+			var ctx = canvas.getContext('2d');
+			var pix = ctx.createImageData(160,120);
+			var data = pix.data;
+			var srcData = Base64.decode(dm);
+			for(var i = 0; i < 160*120; i++) {
+				data[i*4] = srcData[i*2];
+				data[i*4 + 1] = srcData[i*2 + 1];
+				data[i*4 + 2] = 255;
+				data[i*4 + 3] = 255;
+			}
+			ctx.putImageData(pix, 0, 0);
+		}
+
 
 		</script>
 		
-		<div id="pluginContainer" style="{display:none}">
+		<div id="pluginContainer">
+			<object id="ZigPlugin" type="application/x-zig" width="0" height="0">
+				<param name="onload" value="pluginLoaded" />
+			</object>
+		</div> 
         
 		</div>
 	</body>

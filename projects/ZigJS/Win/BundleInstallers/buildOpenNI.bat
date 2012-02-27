@@ -1,15 +1,17 @@
 candle installerOpenNI.wxs
 IF %ERRORLEVEL% GTR 0 goto error
-light -ext WixBalExtension -o %1\ZigJSOpenNI.exe installerOpenNI.wixobj
+light -ext WixBalExtension -o %1\ZigJSOpenNI_unsigned.exe installerOpenNI.wixobj
 IF %ERRORLEVEL% GTR 0 goto error
-echo sleeping for 5 seconds to ensure ZigJSOpenNI.exe is not in use
-REM creating a vbs script to sleep for 5 second because otherwise signing fails
-> "%Temp%.\sleep.vbs" ECHO WScript.Sleep 5000
-CSCRIPT //NoLogo "%Temp%.\sleep.vbs"
-DEL "%Temp%.\sleep.vbs"
 
 set /p passphrase= <../../../../../codesign/passphrase.txt
+
+REM unpack bootstrapper engine, sign it and then place the signed version in the bundle
+insignia -ib %1\ZigJSOpenNI_unsigned.exe -o engine.exe
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bin\signtool.exe" sign /f ../../zigcert.pfx /p %passphrase% /t http://timestamp.digicert.com/ engine.exe
+insignia -ab engine.exe %1\ZigJSOpenNI_unsigned.exe -o %1\ZigJSOpenNI.exe
+REM sign the bundle with the signed bootstrapper
 "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bin\signtool.exe" sign /f ../../zigcert.pfx /p %passphrase% /t http://timestamp.digicert.com/ %1\ZigJSOpenNI.exe
+IF %ERRORLEVEL% GTR 0 goto error
 goto quit
 
 :error

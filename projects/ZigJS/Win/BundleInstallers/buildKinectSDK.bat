@@ -1,17 +1,17 @@
 candle installerKinectSDK.wxs
 IF %ERRORLEVEL% GTR 0 goto error
-light -ext WixBalExtension -o %1\ZigJSKinectSDK.exe installerKinectSDK.wixobj
+light -ext WixBalExtension -o %1\ZigJSKinectSDK_unsigned.exe installerKinectSDK.wixobj
 IF %ERRORLEVEL% GTR 0 goto error
-echo sleeping for 5 seconds to ensure ZigJSKinectSDK.exe is not in use
-REM creating a vbs script to sleep for 1 second because otherwise signing fails
-> "%Temp%.\sleep.vbs" ECHO WScript.Sleep 5000
-CSCRIPT //NoLogo "%Temp%.\sleep.vbs"
-DEL "%Temp%.\sleep.vbs"
 
 REM thank you internet for this "variable" hack
 set /p passphrase= <../../../../../codesign/passphrase.txt
-
+REM unpack bootstrapper engine, sign it and then place the signed version in the bundle
+insignia -ib %1\ZigJSKinectSDK_unsigned.exe -o engine.exe
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bin\signtool.exe" sign /f ../../zigcert.pfx /p %passphrase% /t http://timestamp.digicert.com/ engine.exe
+insignia -ab engine.exe %1\ZigJSKinectSDK_unsigned.exe -o %1\ZigJSKinectSDK.exe
+REM sign the bundle with the signed bootstrapper
 "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bin\signtool.exe" sign /f ../../zigcert.pfx /p %passphrase% /t http://timestamp.digicert.com/ %1\ZigJSKinectSDK.exe
+IF %ERRORLEVEL% GTR 0 goto error
 goto quit
 :error
 echo Failed creating KinectSDK bundle :(

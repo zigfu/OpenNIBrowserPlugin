@@ -244,7 +244,12 @@
         function pluginLoaded() {
 			
 			var plugin = document.getElementById("ZigPlugin");
-			plugin.requestStreams(true, false, false);
+		    try {
+	           plugin.requestStreams(true, false, false);
+	        } catch(e) {
+	            console.log('new style plugin');
+	            plugin.requestStreams({updateDepth: true, updateImage: false, updateLabelMap : false});
+	        }
 			plugin.addEventListener("NewFrame", function() { 
 				drawDM(plugin, canvas);
 				texture.needsUpdate = true;

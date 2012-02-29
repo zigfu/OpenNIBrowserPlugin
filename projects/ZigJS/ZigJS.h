@@ -38,9 +38,9 @@ private:
 
 	static bool s_getDepth;
 	static bool s_getImage;
-	static bool s_isWebplayer;
+	static bool s_getLabelmap;
 public:
-	static void SetStreams(bool getDepth, bool getImage, bool isWebplayer);
+	static void SetStreams(bool getDepth, bool getImage, bool getLabelmap);
 
     static void StaticInitialize();
     static void StaticDeinitialize();

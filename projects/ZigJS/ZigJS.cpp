@@ -31,12 +31,12 @@ void ZigJS::AddListener(ZigJSAPIWeakPtr listener)
 //TODO: something that handles multiple tabs in a sane fashion
 bool ZigJS::s_getImage = false;
 bool ZigJS::s_getDepth = false;
-bool ZigJS::s_isWebplayer = false;
-void ZigJS::SetStreams(bool getDepth, bool getImage, bool isWebplayer)
+bool ZigJS::s_getLabelmap = false;
+void ZigJS::SetStreams(bool getDepth, bool getImage, bool getLabelmap)
 {
 	s_getImage = getImage;
 	s_getDepth = getDepth;
-	s_isWebplayer = isWebplayer;
+	s_getLabelmap = getLabelmap;
 }
 const int REOPEN_WAIT_FRAMES = 450;
 void ZigJS::ReadFrame(void *)
@@ -68,7 +68,7 @@ void ZigJS::ReadFrame(void *)
 		isSensorOk = false;
 	}
 
-	if (isSensorOk && s_sensor->ReadFrame(s_getDepth, s_getImage, s_isWebplayer)) {
+	if (isSensorOk && s_sensor->ReadFrame(s_getDepth, s_getImage, s_getLabelmap)) {
 		// New data!!!
 		newDataAvailable = true;
 	}
@@ -93,6 +93,10 @@ void ZigJS::ReadFrame(void *)
 					if (s_getDepth) { 
 						//realPtr->unregisterAttribute("depthMap");
 						realPtr->setDepthMap(s_sensor->GetDepth());
+					}
+					if (s_getLabelmap) { 
+						//realPtr->unregisterAttribute("depthMap");
+						realPtr->setLabelMap(s_sensor->GetLabelMap());
 					}
 					realPtr->onNewFrame(s_sensor->GetEventData());
 				}

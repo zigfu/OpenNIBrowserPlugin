@@ -431,7 +431,7 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool updateL
 
 		unsigned short userids[8] = {0}; //user-id to tracking-id
 		userids[0] = userids[7] = 0; 
-		for(int i = 1; i < 6; i++) {
+		for(int i = 1; i <= 6; i++) {
 			//TODO: test if we lose data from this cast
 			//NOTE: we're counting on the fact that for an untracked skeleton dwTrackingID is 0
 			userids[i] = (unsigned short)(skeletonFrame.SkeletonData[i-1].dwTrackingID);

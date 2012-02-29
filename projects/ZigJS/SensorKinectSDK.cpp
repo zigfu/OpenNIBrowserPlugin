@@ -623,8 +623,8 @@ FB::VariantList SensorKinectSDK::convertWorldToImageSpace(const std::vector<doub
 		NuiTransformSkeletonToDepthImage(input, &outX, &outY);
 		// convert from kinect resolution (DEPTH_MAP_WIDHT/HEIGHT) to output resolution (MAP_XRES/YRES)
 		// (assume it's always upscaling by a whole number for now)
-		vl[i*3] = outX * (MAP_XRES / DEPTH_MAP_WIDTH); 
-		vl[i*3 + 1] = outY * (MAP_YRES / DEPTH_MAP_HEIGHT);
+		vl[i*3] = outX * (((float)MAP_XRES) / DEPTH_MAP_WIDTH); 
+		vl[i*3 + 1] = outY * (((float)MAP_YRES) / DEPTH_MAP_HEIGHT);
 		vl[i*3 + 2] = points[i*3 + 2]; // no need to scale Z
 		// Z stays the same
 	}

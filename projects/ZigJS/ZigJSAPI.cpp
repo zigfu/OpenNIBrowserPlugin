@@ -173,11 +173,27 @@ void ZigJSAPI::setImageMap(const FB::variant& imageMap)
 }
 
 
-void ZigJSAPI::requestStreams(bool updateDepth, bool updateImage, bool isWebplayer)
+void ZigJSAPI::requestStreams(FB::VariantMap options)
 {
 	if (!m_watermark.IsOk()) return;
+	bool updateDepth = false;
+	bool updateImage = false;
+	bool updateLabelmap = false; 
+	//update from defaults if exists
+	try {
+		updateDepth = options["updateDepth"].convert_cast<bool>();
+	} catch (const FB::bad_variant_cast&) {
+	}
+	try {
+		updateImage = options["updateImage"].convert_cast<bool>();
+	} catch (const FB::bad_variant_cast&) {
+	}
+	try {
+		updateLabelmap = options["updateLabelmap"].convert_cast<bool>();
+	} catch (const FB::bad_variant_cast&) {
+	}
 	//note: this always happens from the main thread so it should be safe
-	ZigJS::SetStreams(updateDepth, updateImage, isWebplayer);
+	ZigJS::SetStreams(updateDepth, updateImage, updateLabelmap);
 }
 
 

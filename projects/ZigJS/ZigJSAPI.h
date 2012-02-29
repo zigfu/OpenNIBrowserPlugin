@@ -75,7 +75,7 @@ private:
 
 	bool get_sensorConnected();
 
-	void requestStreams(bool updateDepth, bool updateImage, bool isWebplayer);
+	void requestStreams(FB::VariantMap options);
 
 	void Invalidate() { m_watermark.Invalidate(); }
 	bool Test() {return m_watermark.Test(); }

@@ -653,7 +653,7 @@ bool SensorOpenNI::Valid() const {
 	return m_initialized && (!m_error);
 }
 
-bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer) {
+bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool updateLabelMap) {
 	//TODO: refactor so that the per-frame results are encapsulated in an object
 	//      instead of having a stateful object
 
@@ -689,51 +689,39 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 	if (updateDepth) {
 		XnUInt32 xRatio = m_pDepthMD->pMap->Res.X / MAP_XRES; // assume there's never going to up upscaling
 		XnUInt32 yRatio = m_pDepthMD->pMap->Res.Y / MAP_YRES;
-		if (isWebplayer) {
-			// for webplayer, increment every pixel by 1 to solve null-termination problem
-			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
-				// get start-of-line read pointer
-				const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
-				for(XnUInt32 x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
-					m_depthBuffer[x + y*MAP_XRES*2] = (*p) | 1; // set LSB on least-significant byte
-					m_depthBuffer[x + 1 + y*MAP_XRES*2] = ((*p) >> 8) | (1<<7); // MSB on most-significant
-				}
-			}
-		} else {
 
-			// base64 encode + downscale loop follows. Here's some info about it:
-			// I'm assuming total number of pixels will always divide by 3 (works for 4x3 and 16x9 aspect ratios)
-			// so as not to have special code for the end of the input.
-			// base64 encodes 6 bits to 8 bits, so to fall on whole-byte boundaries, it's 3 input bytes into 4 characters
-			// Every depth pixel is two bytes, so 3 pixels = 6 input bytes = 8 output characters
-			// but, the catch is that the number of pixels in a row does not divide by 3
-			// so I keep a pixel count (outputState), and so for every pixel I read, the behavior is:
-			// if it's the first pixel (outputState % 3 == 0), store the two input bytes (in b1, b2)
-			// if it's the second, use the two stored bytes from last iteration and the LSB of the current
-			// pixel as a triplet, and store the MSB of the pixel in b1
-			// if it's the third, use b1 and the two bytes of the pixel for a triplet
+		// base64 encode + downscale loop follows. Here's some info about it:
+		// I'm assuming total number of pixels will always divide by 3 (works for 4x3 and 16x9 aspect ratios)
+		// so as not to have special code for the end of the input.
+		// base64 encodes 6 bits to 8 bits, so to fall on whole-byte boundaries, it's 3 input bytes into 4 characters
+		// Every depth pixel is two bytes, so 3 pixels = 6 input bytes = 8 output characters
+		// but, the catch is that the number of pixels in a row does not divide by 3
+		// so I keep a pixel count (outputState), and so for every pixel I read, the behavior is:
+		// if it's the first pixel (outputState % 3 == 0), store the two input bytes (in b1, b2)
+		// if it's the second, use the two stored bytes from last iteration and the LSB of the current
+		// pixel as a triplet, and store the MSB of the pixel in b1
+		// if it's the third, use b1 and the two bytes of the pixel for a triplet
 
-			int outputIndex = 0;
-			int outputState = 0;
-			unsigned char b1,b2;
-			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
-				const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
-				for(XnUInt32 x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
-					switch(outputState % 3) {
-						case 0:
-							b1 = (unsigned char)(*p);
-							b2 = (unsigned char)((*p) >> 8);
-							break;
-						case 1:
-							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)(*p));
-							outputIndex += 4;
-							b1 = (*p) >> 8;
-							break;
-						case 2:
-							b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)(*p), (unsigned char)((*p) >> 8));
-							outputIndex += 4;
-							break;
-					}
+		int outputIndex = 0;
+		int outputState = 0;
+		unsigned char b1,b2;
+		for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+			const XnDepthPixel* p = m_pDepthMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
+			for(XnUInt32 x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+				switch(outputState % 3) {
+					case 0:
+						b1 = (unsigned char)(*p);
+						b2 = (unsigned char)((*p) >> 8);
+						break;
+					case 1:
+						b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)(*p));
+						outputIndex += 4;
+						b1 = (*p) >> 8;
+						break;
+					case 2:
+						b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)(*p), (unsigned char)((*p) >> 8));
+						outputIndex += 4;
+						break;
 				}
 			}
 		}
@@ -754,35 +742,20 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 		XnUInt32 yRatio = m_pImageMD->pMap->Res.Y / MAP_YRES;
 		//TODO: support only RGB24 by checking m_pImageMD->pMap->PixelFormat
 		// right now it's assuming RGB24, not validating
-		if (isWebplayer) {
-			// for webplayer, increment every pixel by 1 to solve null-termination problem
-			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
-				// get start-of-line read pointer
-				const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
-				for(XnUInt32 x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*3) {
-					unsigned char r = p[0];
-					unsigned char g = p[1];
-					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = (r | 1);
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (g | 1);
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (b | 1);
-				}
+
+		for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+			// get start-of-line read pointer
+			const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
+			// unrolled for two pixels (3 characters)
+			// x is in characters (it's used for output)
+			for(XnUInt32 x = 0; x < MAP_XRES * 4; x+=4, p += xRatio*3) {
+				unsigned char r = p[0];
+				unsigned char g = p[1];
+				unsigned char b = p[2];
+				b64_encode_triplet(m_imageBuffer, x + y*MAP_XRES*4, r,g,b);
 			}
-		} else {
-			for(XnUInt32 y = 0; y < MAP_YRES; y++) {
-				// get start-of-line read pointer
-				const XnUInt8 * p = m_pImageMD->pData + (y*yRatio*m_pImageMD->pMap->Res.X*3);
-				// unrolled for two pixels (3 characters)
-				// x is in characters (it's used for output)
-				for(XnUInt32 x = 0; x < MAP_XRES * 4; x+=4, p += xRatio*3) {
-					unsigned char r = p[0];
-					unsigned char g = p[1];
-					unsigned char b = p[2];
-					b64_encode_triplet(m_imageBuffer, x + y*MAP_XRES*4, r,g,b);
-				}
-			}
-			
 		}
+			
 		//m_imageJS.reset(); //needed to stop memory leak
 #ifdef _WIN32
 		// On windows, this works and doesn't leak memory
@@ -793,6 +766,41 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool isWebplaye
 		m_imageJS = FB::make_variant(m_imageBuffer);
 #endif
 	}// if (updateImage)
+	//TODO: get 2d bounds per user when iterating over labelmap
+	if (updateLabelMap) {
+		XnUInt32 xRatio = m_pSceneMD->pMap->Res.X / MAP_XRES; // assume there's never going to up upscaling
+		XnUInt32 yRatio = m_pSceneMD->pMap->Res.Y / MAP_YRES;
+		int outputIndex = 0;
+		int outputState = 0;
+		unsigned char b1,b2;
+		for(XnUInt32 y = 0; y < MAP_YRES; y++) {
+			const XnLabel* p = m_pSceneMD->pData + (y*yRatio*m_pDepthMD->pMap->Res.X);
+			for(XnUInt32 x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+				switch(outputState % 3) {
+					case 0:
+						b1 = (unsigned char)(*p);
+						b2 = (unsigned char)((*p) >> 8);
+						break;
+					case 1:
+						b64_encode_triplet(m_labelMapBuffer, outputIndex, b1, b2, (unsigned char)(*p));
+						outputIndex += 4;
+						b1 = (*p) >> 8;
+						break;
+					case 2:
+						b64_encode_triplet(m_labelMapBuffer, outputIndex, b1, (unsigned char)(*p), (unsigned char)((*p) >> 8));
+						outputIndex += 4;
+						break;
+				}
+			}
+		}
+#ifdef _WIN32
+		m_labelMapJS.assign(FB::make_variant(m_labelMapBuffer));
+#else
+		m_labelMapJS = FB::make_variant(m_labelMapBuffer);
+#endif
+
+	} // if (updateLabelmap)
+
 	Json::Value pluginData;
 	pluginData["hands"] = MakeHandsJsonList();
 	pluginData["users"] = MakeUsersJsonList();

@@ -391,7 +391,7 @@ int KinectToZigId(int joint)
 }
 
 
-bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer)
+bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool updateLabelMap)
 {
 	if (!Valid()) return false;
 	HRESULT read;
@@ -413,7 +413,7 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 	}
 
 	// get image/depth if available/needed
-	if (updateDepth) {
+	if (updateDepth || updateLabelMap) {
 		int xRatio = DEPTH_MAP_WIDTH / MAP_XRES; // assume there's never going to up upscaling
 		int yRatio = DEPTH_MAP_HEIGHT / MAP_YRES;
 
@@ -428,23 +428,22 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 			return false;
 		}
 		unsigned short * pixels = (unsigned short *)rect.pBits;
-		if (isWebplayer) {
-			// for webplayer, increment every pixel by 1 to solve null-termination problem
-			for(int y = 0; y < MAP_YRES; y++) {
-				// get start-of-line read pointer
-				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
-				for(int x = 0; x < MAP_XRES*2; x += 2, p += xRatio) {
-					unsigned short pixel = (*p) >> 3;
-					m_depthBuffer[x + y*MAP_XRES*2] = (pixel) | 1; // set LSB on least-significant byte
-					m_depthBuffer[x + 1 + y*MAP_XRES*2] = ((pixel) >> 8) | (1<<7); // MSB on most-significant
-				}
-			}
-		} else {
-			// base64 encoding. see the equivalent code in SensorOpenNI.cpp for a more detailed explanation
-			// of how this works
-			int outputIndex = 0;
-			int outputState = 0;
-			unsigned char b1,b2;
+
+		unsigned short userids[8] = {0}; //user-id to tracking-id
+		userids[0] = userids[7] = 0; 
+		for(int i = 1; i < 6; i++) {
+			//TODO: test if we lose data from this cast
+			//NOTE: we're counting on the fact that for an untracked skeleton dwTrackingID is 0
+			userids[i] = (unsigned short)(skeletonFrame.SkeletonData[i-1].dwTrackingID);
+		}
+
+		// base64 encoding. see the equivalent code in SensorOpenNI.cpp for a more detailed explanation
+		// of how this works
+		int outputIndex = 0;
+		int outputState = 0;
+		unsigned char b1, b2; //depth buffer bytes
+		unsigned char l1, l2; //label map bytes
+		if (!updateLabelMap) {
 			for(int y = 0; y < MAP_YRES; y++) {
 				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
 				for(int x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
@@ -466,11 +465,67 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 					}
 				}
 			}
+		} // if (!updateLabelMap)
+		else if (!updateDepth) {
+			for(int y = 0; y < MAP_YRES; y++) {
+				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
+				for(int x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+					unsigned short label = userids[(*p) & 7]; // lower-order 3 bits
+					switch(outputState % 3) {
+						case 0:
+							l1 = (unsigned char)(label);
+							l2 = (unsigned char)(label >> 8);
+							break;
+						case 1:
+							b64_encode_triplet(m_labelMapBuffer, outputIndex, l1, l2, (unsigned char)label);
+							outputIndex += 4;
+							l1 = label >> 8;
+							break;
+						case 2:
+							b64_encode_triplet(m_labelMapBuffer, outputIndex, l1, (unsigned char)label, (unsigned char)(label >> 8));
+							outputIndex += 4;
+							break;
+					}
+				}
+			}
+		} // updateLabelMap && (!updateDepth)
+		else { // update both depth and label
+			for(int y = 0; y < MAP_YRES; y++) {
+				const unsigned short * p = pixels + (y*yRatio*DEPTH_MAP_WIDTH);
+				for(int x = 0; x < MAP_XRES; x++, p += xRatio, outputState++) {
+					unsigned short label = userids[(*p) & 7]; // lower-order 3 bits
+					unsigned short pixel = (*p) >> 3;
+					switch(outputState % 3) {
+						case 0:
+							l1 = (unsigned char)(label);
+							l2 = (unsigned char)(label >> 8);
+							b1 = (unsigned char)(pixel);
+							b2 = (unsigned char)(pixel >> 8);
+							break;
+						case 1:
+							b64_encode_triplet(m_labelMapBuffer, outputIndex, l1, l2, (unsigned char)label);
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, b2, (unsigned char)pixel);
+							outputIndex += 4;
+							l1 = label >> 8;
+							b1 = pixel >> 8;
+							break;
+						case 2:
+							b64_encode_triplet(m_labelMapBuffer, outputIndex, l1, (unsigned char)label, (unsigned char)(label >> 8));
+							b64_encode_triplet(m_depthBuffer, outputIndex, b1, (unsigned char)pixel, (unsigned char)(pixel >> 8));
+							outputIndex += 4;
+							break;
+					}
+				}
+			}
 		}
 		frame.pFrameTexture->UnlockRect(0); // TODO: check result?
 		m_sensor->NuiImageStreamReleaseFrame(m_depth, &frame);
-
-		m_depthJS.assign(FB::make_variant(m_depthBuffer));
+		if (updateDepth) {
+			m_depthJS.assign(FB::make_variant(m_depthBuffer));
+		}
+		if (updateLabelMap) {
+			m_labelMapJS.assign(FB::make_variant(m_labelMapBuffer));
+		}
 	} // if (updateDepth)
 
 	if (updateImage) {
@@ -488,31 +543,15 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool isWebpl
 			return false;
 		}
 		// right now it's assuming RGBX (kinectSDK)
-		if (isWebplayer) {
-			// for webplayer, increment every pixel by 1 to solve null-termination problem
-			for(int y = 0; y < MAP_YRES; y++) {
-				// get start-of-line read pointer
-				const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
-				for(int x = 0; x < MAP_XRES * 3; x+=3, p += xRatio*4) {
-					unsigned char r = p[0];
-					unsigned char g = p[1];
-					unsigned char b = p[2];
-					m_imageBuffer[x + y*MAP_XRES*3] = (r | 1);
-					m_imageBuffer[x + 1 + y*MAP_XRES*3] = (g | 1);
-					m_imageBuffer[x + 2 + y*MAP_XRES*3] = (b | 1);
-				}
-			}
-		} else {
-			for(int y = 0; y < MAP_YRES; y++) {
-				// get start-of-line read pointer
-				const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
-				for(int x = 0; x < MAP_XRES * 4; x+=4, p += xRatio*4) {
-					unsigned char r = p[0];
-					unsigned char g = p[1];
-					unsigned char b = p[2];
-					b64_encode_triplet(m_imageBuffer, x + y*MAP_XRES*4, r,g,b);
+		for(int y = 0; y < MAP_YRES; y++) {
+			// get start-of-line read pointer
+			const unsigned char * p = rect.pBits + (y*yRatio*IMAGE_MAP_WIDTH*4);
+			for(int x = 0; x < MAP_XRES * 4; x+=4, p += xRatio*4) {
+				unsigned char r = p[0];
+				unsigned char g = p[1];
+				unsigned char b = p[2];
+				b64_encode_triplet(m_imageBuffer, x + y*MAP_XRES*4, r,g,b);
 
-				}
 			}
 		}
 		frame.pFrameTexture->UnlockRect(0); // TODO: check result?

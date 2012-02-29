@@ -17,7 +17,7 @@ public:
 	SensorKinectSDK(const wchar_t* id);
 	virtual ~SensorKinectSDK();
 
-	virtual bool ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer); //true if there is new data, false otherwise
+	virtual bool ReadFrame(bool updateDepth, bool updateImage, bool updateLabelMap); //true if there is new data, false otherwise
 	virtual FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
 	virtual FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);
 	virtual bool Valid() const;

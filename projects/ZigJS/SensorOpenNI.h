@@ -34,7 +34,7 @@ public:
 	SensorOpenNI();
 	virtual ~SensorOpenNI();
 
-	bool ReadFrame(bool updateDepth, bool updateImage, bool isWebplayer); //true if there is new data, false otherwise
+	bool ReadFrame(bool updateDepth, bool updateImage, bool updateLabelMap); //true if there is new data, false otherwise
 
 	bool Valid() const;
 	//boost::shared_ptr< FB::variant > GetImageBase64() const;

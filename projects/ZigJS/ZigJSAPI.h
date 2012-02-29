@@ -59,6 +59,7 @@ public:
 	void onNewFrame(const std::string& out);
 	void setDepthMap(const FB::variant& depthMap);
 	void setImageMap(const FB::variant& imageMap);
+	void setLabelMap(const FB::variant& labelMap);
 
 	FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
 	FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);

@@ -39,8 +39,10 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	//TODO: fix read-only-ness (get from upstream Firebreath)
 	registerAttribute("depthMapResolution", res, true);
 	registerAttribute("imageMapResolution", res, true);
+	registerAttribute("labelMapResolution", res, true);
 	registerAttribute("imageMap", "", false);
 	registerAttribute("depthMap", "", false);
+	registerAttribute("labelMap", "", false);
 	registerAttribute("isZig", true, true);
 	registerProperty("watermark", make_property(this, &ZigJSAPI::get_Watermark));
 	registerProperty("sensorConnected", make_property(this, &ZigJSAPI::get_sensorConnected));
@@ -171,14 +173,18 @@ void ZigJSAPI::setImageMap(const FB::variant& imageMap)
 	if (!m_watermark.IsOk()) return;
 	setAttribute("imageMap", imageMap);
 }
-
+void ZigJSAPI::setLabelMap(const FB::variant& labelMap)
+{
+	if (!m_watermark.IsOk()) return;
+	setAttribute("labelMap", labelMap);
+}
 
 void ZigJSAPI::requestStreams(FB::VariantMap options)
 {
 	if (!m_watermark.IsOk()) return;
 	bool updateDepth = false;
 	bool updateImage = false;
-	bool updateLabelmap = false; 
+	bool updateLabelMap = false; 
 	//update from defaults if exists
 	try {
 		updateDepth = options["updateDepth"].convert_cast<bool>();
@@ -189,11 +195,11 @@ void ZigJSAPI::requestStreams(FB::VariantMap options)
 	} catch (const FB::bad_variant_cast&) {
 	}
 	try {
-		updateLabelmap = options["updateLabelmap"].convert_cast<bool>();
+		updateLabelMap = options["updateLabelMap"].convert_cast<bool>();
 	} catch (const FB::bad_variant_cast&) {
 	}
 	//note: this always happens from the main thread so it should be safe
-	ZigJS::SetStreams(updateDepth, updateImage, updateLabelmap);
+	ZigJS::SetStreams(updateDepth, updateImage, updateLabelMap);
 }
 
 

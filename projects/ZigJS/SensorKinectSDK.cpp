@@ -521,10 +521,10 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool updateL
 		frame.pFrameTexture->UnlockRect(0); // TODO: check result?
 		m_sensor->NuiImageStreamReleaseFrame(m_depth, &frame);
 		if (updateDepth) {
-			m_depthJS.assign(FB::make_variant(m_depthBuffer));
+			m_depthJS = m_depthBuffer;
 		}
 		if (updateLabelMap) {
-			m_labelMapJS.assign(FB::make_variant(m_labelMapBuffer));
+			m_labelMapJS = m_labelMapBuffer;
 		}
 	} // if (updateDepth)
 
@@ -556,8 +556,8 @@ bool SensorKinectSDK::ReadFrame(bool updateDepth, bool updateImage, bool updateL
 		}
 		frame.pFrameTexture->UnlockRect(0); // TODO: check result?
 		m_sensor->NuiImageStreamReleaseFrame(m_image, &frame);
-		//m_imageJS.reset(); //needed to stop memory leak
-		m_imageJS.assign(FB::make_variant(m_imageBuffer));
+
+		m_imageJS = m_imageBuffer;
 	}// if (updateImage)
 
 

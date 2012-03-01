@@ -725,16 +725,8 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool updateLabe
 				}
 			}
 		}
-		//m_depthJS.reset(); // needed to stop memory leak
-#ifdef _WIN32
-		// On windows, this works and doesn't leak memory
-		// on mac, this crashes (even if I give make_variant a blank std::wstring(10000,'a') for example)
-		m_depthJS.assign(FB::make_variant(m_depthBuffer));
-#else
-		// On Mac, this works just fine. On windows, this leaks m_depthBuffer's worth of RAM.
-		m_depthJS = FB::make_variant(m_depthBuffer);
-#endif
 
+		m_depthJS = m_depthBuffer;
 	} // if (updateDepth)
 	if (updateImage) {
 		xnGetImageMetaData(m_image, m_pImageMD);
@@ -756,15 +748,7 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool updateLabe
 			}
 		}
 			
-		//m_imageJS.reset(); //needed to stop memory leak
-#ifdef _WIN32
-		// On windows, this works and doesn't leak memory
-		// on mac, this crashes (even if I give make_variant a blank std::wstring(10000,'a') for example)
-		m_imageJS.assign(FB::make_variant(m_imageBuffer));
-#else
-		// On Mac, this works just fine. On windows, this leaks m_imageBuffer's worth of RAM.
-		m_imageJS = FB::make_variant(m_imageBuffer);
-#endif
+		m_imageJS = m_imageBuffer;
 	}// if (updateImage)
 	//TODO: get 2d bounds per user when iterating over labelmap
 	if (updateLabelMap) {
@@ -793,12 +777,8 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool updateLabe
 				}
 			}
 		}
-#ifdef _WIN32
-		m_labelMapJS.assign(FB::make_variant(m_labelMapBuffer));
-#else
-		m_labelMapJS = FB::make_variant(m_labelMapBuffer);
-#endif
 
+		m_labelMapJS = m_labelMapBuffer;
 	} // if (updateLabelmap)
 
 	Json::Value pluginData;

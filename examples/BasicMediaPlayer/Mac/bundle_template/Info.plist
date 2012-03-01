@@ -41,13 +41,13 @@
 	<key>WebPluginName</key>
 	<string>${FBSTRING_ProductName}</string>
 	<key>WebPluginDescription</key>
-	<string>${FBSTRING_FileDescription}</string>
+	<string>${FBSTRING_PluginDescription}</string>
 	<key>WebPluginMIMETypes</key>
 	<dict>
 		<key>${FBSTRING_MIMEType}</key>
 		<dict>
 			<key>WebPluginTypeDescription</key>
-			<string>${FBSTRING_FileDescription}</string>
+			<string>${FBSTRING_PluginDescription}</string>
 		</dict>
 	</dict>
 </dict>

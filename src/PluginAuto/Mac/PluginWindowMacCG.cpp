@@ -20,6 +20,11 @@ Copyright 2010 Georg Fritzsche, Firebreath development team
 #include "Mac/PluginWindowMacCG.h"
 
 #include "PluginWindowMacCG.h"
+#include <Carbon/Carbon.h>
+
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1050
+typedef float CGFloat; // hack for 10.4 sdk
+#endif
 
 using namespace FB;
 
@@ -69,17 +74,22 @@ void PluginWindowMacCG::DrawLabel(CGContextRef cgContext, FB::Rect bounds) {
     float fps = m_frames.size() / ((m_frames.front() - m_frames.back()) / 1000000.0);
 
     CGContextSaveGState(cgContext);
+    CGColorSpaceRef rgbSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
 
-    CGColorRef boxColor = CGColorCreateGenericRGB(0.0, 0.0, 0.0, 1.0);
+    CGFloat boxColorValues[4] = {0.0, 0.0, 0.0, 1.0};
+    CGColorRef boxColor = CGColorCreate(rgbSpace, boxColorValues);
     CGContextSetFillColorWithColor(cgContext, boxColor);
     CGContextFillRect(cgContext, CGRectMake(0, 0, 400, 24));
+    CGColorRelease(boxColor);
 
     char label[256];
     sprintf(label, "CoreGraphics %.01f fps #%lld", fps, m_count++);
-    CGColorRef txtColor = CGColorCreateGenericRGB(0.0, 1.0, 0.0, 1.0);
+    CGFloat txtColorValues[4] = {0.0, 1.0, 0.0, 1.0};
+    CGColorRef txtColor = CGColorCreate(rgbSpace, txtColorValues);
     CGContextSetStrokeColorWithColor(cgContext, txtColor);
     CGContextSetFillColorWithColor(cgContext, txtColor);
     CGColorRelease(txtColor);
+    CGColorSpaceRelease(rgbSpace);
     CGContextSetTextMatrix(cgContext, CGAffineTransformMake(1.0, 0.0, 0.0, -1.0, 0.0, 0.0)); // Flip the text right-side up.
     CGContextSelectFont(cgContext, "Helvetica", 24, kCGEncodingMacRoman);
     CGContextShowTextAtPoint(cgContext, 0, 19, label, strlen(label));

@@ -52,12 +52,12 @@ firebreath_sign_plugin(${PROJECT_NAME}
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
-	$ENV{OPEN_NI_LIB}/openNI.lib
+    $ENV{OPEN_NI_LIB}/openNI.lib
     $ENV{KINECTSDK10_DIR}lib/x86/Kinect10.lib
     delayimp.lib # needed for delay-load
     )
 
-
+# Tell the linker to delay-load our DLLs
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "/DELAYLOAD:openNI.dll /DELAYLOAD:Kinect10.dll"
     )
@@ -68,7 +68,7 @@ set(WIX_HEAT_FLAGS
     -cg PluginDLLGroup  # Set the Component group name
     -dr INSTALLDIR      # Set the directory ID to put the files in
     )
-
+    
 # my change to make the msi name include the version string
 set(FB_WIX_DEST ${FB_BIN_DIR}/${PLUGIN_NAME}/${CMAKE_CFG_INTDIR}/${PLUGIN_NAME}v${FBSTRING_PLUGIN_VERSION}.msi)
 add_wix_installer( ${PLUGIN_NAME}

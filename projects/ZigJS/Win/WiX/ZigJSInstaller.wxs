@@ -2,8 +2,8 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Product Id="*" Name="${FBSTRING_PluginName}" Language="1033" Version="${FBSTRING_PLUGIN_VERSION}" Manufacturer="${FBSTRING_CompanyName}" UpgradeCode="{86918727-b6e2-5efd-9e0d-1296d108a20c}">
         <Package InstallerVersion="300" Compressed="yes" Description="Installer for the ${PLUGIN_NAME} plugin" InstallScope="perMachine" />
-      <!-- TODO: return to perUser - was InstallScope="perUser", but we need to do perMachine for the bundle to work -->
-      
+        <!-- TODO: return to perUser - was InstallScope="perUser", but we need to do perMachine for the bundle to work -->
+
         <Upgrade Id="{86918727-b6e2-5efd-9e0d-1296d108a20c}">
             <UpgradeVersion
                 Property="OLD_VERSION_FOUND"
@@ -70,21 +70,20 @@
             </Directory>
         </Directory>
 
-      <DirectoryRef Id="TARGETDIR">
-        <Merge Id="VCRedist" SourceFile="${CMAKE_CURRENT_SOURCE_DIR}/Win/Microsoft_VC100_CRT_x86.msm" DiskId="1" Language="0"/>
-      </DirectoryRef>
-      <Feature Id="VCRedist" Title="Visual C++ 10.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
-        <MergeRef Id="VCRedist"/>
-      </Feature>
+        <DirectoryRef Id="TARGETDIR">
+            <Merge Id="VCRedist" SourceFile="${CMAKE_CURRENT_SOURCE_DIR}/Win/Microsoft_VC100_CRT_x86.msm" DiskId="1" Language="0"/>
+        </DirectoryRef>
+        <Feature Id="VCRedist" Title="Visual C++ 10.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+            <MergeRef Id="VCRedist"/>
+        </Feature>
 
-      <UIRef Id="WixUI_Minimal"/>
-      <WixVariable Id="WixUILicenseRtf" Value="${CMAKE_CURRENT_SOURCE_DIR}/Win/license.rtf"/>
-      <!-- this should be a by bmp-->
-      <!--<WixVariable Id="WixUIBannerBmp" Value="${CMAKE_CURRENT_SOURCE_DIR}/neonBG.bmp"/>-->
-      <!-- this should be a 204x389 bmp-->
-      <!--<WixVariable Id="WixUIDialogBmp" Value="${CMAKE_CURRENT_SOURCE_DIR}/neonFirstScreen.bmp"/>-->
-
-      <Feature Id="MainPluginFeature" Title="${FBSTRING_ProductName}" Level="1">
+        <UIRef Id="WixUI_Minimal"/>
+        <WixVariable Id="WixUILicenseRtf" Value="${CMAKE_CURRENT_SOURCE_DIR}/Win/license.rtf"/>
+        <!-- this should be a by bmp-->
+        <!--<WixVariable Id="WixUIBannerBmp" Value="${CMAKE_CURRENT_SOURCE_DIR}/neonBG.bmp"/>-->
+        <!-- this should be a 204x389 bmp-->
+        <!--<WixVariable Id="WixUIDialogBmp" Value="${CMAKE_CURRENT_SOURCE_DIR}/neonFirstScreen.bmp"/>-->
+        <Feature Id="MainPluginFeature" Title="${FBSTRING_ProductName}" Level="1">
             <ComponentRef Id="InstallDirComp"/>
             <ComponentRef Id="PluginNameDirComp"/>
             <ComponentRef Id="CompanyDirComp"/>

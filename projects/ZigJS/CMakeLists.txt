@@ -17,9 +17,9 @@ file (GLOB GENERAL RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
 include_directories(${PLUGIN_INCLUDE_DIRS}
-					$ENV{OPEN_NI_INCLUDE}
+                    $ENV{OPEN_NI_INCLUDE}
                     Eigen
-					)
+                    )
 
 # Generated files are stored in ${GENERATED} by the project configuration
 SET_SOURCE_FILES_PROPERTIES(

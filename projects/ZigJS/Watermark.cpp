@@ -106,7 +106,6 @@ const int VERIFY_WATERMARK_TIME = 1000;
 Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 {
 	m_ok = true;
-	m_gotValidate = true;
 	m_browser = browserPtr;
 	m_tryCount = 0;
 	m_token = rand();
@@ -127,7 +126,7 @@ Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 		m_element = elem->getJSObject();
 		if (!m_element) {
 			m_ok = false;
-			browserPtr->htmlLog("element is bad :(");
+			//browserPtr->htmlLog("element is bad :(");
 			return;
 		}
 
@@ -140,23 +139,24 @@ Watermark::Watermark(FB::BrowserHostPtr browserPtr)
 		//browserPtr->htmlLog("wm: setting innerHTML");
 		m_element->SetProperty("innerHTML", watermarkHTML);
 	} catch(const FB::script_error& ex) {
-		browserPtr->htmlLog(ex.what());
+		//browserPtr->htmlLog(ex.what());
 		m_ok = false;
 	}
 }
 Watermark::~Watermark()
 {
-
 }
 
 bool Watermark::IsOk()
 {
-	if (m_ok) {
+	//if (m_ok) {
 		if (m_lastValidationTime + MaxDurationBetweenVerifications < boost::posix_time::second_clock::universal_time()) {
 			Log("Timed out since last validation!");
 			m_ok = false;
+		} else {
+			m_ok = true;
 		}
-	}
+	//}
 	return m_ok;
 }
 
@@ -177,7 +177,6 @@ static const char * verificationFunction = "var plugins = document.getElementsBy
 // innerHTML-based comparison 
 //"    var item = document.elementFromPoint(wmX, wmY);var wmh = wm.innerHTML"
 //"    if (item.innerHTML != wmh && (item.parentNode.innerHTML != wmh) && (item.parentNode.parentNode.innerHTML != wmh)) {"
-//TODO: compile log only in debug mode
 #ifdef _DEBUG
 "        console.log('invalidating because invisible'); console.log(wm); console.log(item); console.log(item.parentNode); console.log(item.parentNode.parentNode);"
 "		 console.log(this);"
@@ -193,25 +192,19 @@ bool Watermark::Test()
 {
 	//TODO: test for "known URLs" here!
 	Log("Got watermark test!");
-	if (m_ok) {
+	//if (m_ok) {
 		
-		if (!m_gotValidate) {
-			m_ok = false;
-			//TODO: remove/ifdef after debugging
-			Log("watermark validation failed - didn't get successful validate!");
-		} else { // got a good validate - reset state for next cycle
-			m_tryCount = 0;
-			m_gotValidate = false;
-			m_token = rand();
-			FB::BrowserHostPtr browser = m_browser.lock();
-			if (browser) {
-				Log("watermark validation ok, starting next round");
-				//Log((boost::format(verificationFunction) % m_token).str());
-				browser->evaluateJavaScript((boost::format(verificationFunction) % m_token).str());
-				return true;
-			}
+
+		m_tryCount = 0;
+		m_token = rand();
+		FB::BrowserHostPtr browser = m_browser.lock();
+		if (browser) {
+			Log("watermark validation ok, starting next round");
+			//Log((boost::format(verificationFunction) % m_token).str());
+			browser->evaluateJavaScript((boost::format(verificationFunction) % m_token).str());
+			return true;
 		}
-	}
+	//}
 	return false;
 }
 
@@ -230,7 +223,6 @@ void Watermark::Validate(int key)
 	}
 	m_tryCount++;
 	if (key == m_token) {
-		m_gotValidate = true;
 		m_lastValidationTime = boost::posix_time::second_clock::universal_time();
 	} //TODO: immediately fail otherwise?
 }

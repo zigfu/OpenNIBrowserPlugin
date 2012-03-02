@@ -56,7 +56,7 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	registerMethod("convertWorldToImageSpace", make_method(this, &ZigJSAPI::convertWorldToImageSpace));
 
 	// test every 7 secs or so
-	m_watermarkTimer = FB::Timer::getTimer(7000, true, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
+	m_watermarkTimer = FB::Timer::getTimer(5000, true, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
 	m_watermarkTimer->start();
 }
 
@@ -228,8 +228,7 @@ void ZigJSAPI::WatermarkTest()
 	//test only returns true if validation was successful - restart the timer in that case
 	if (!Test()) {
 		// stop trying again on failure
-		m_watermarkTimer->stop(); 
-		//m_watermarkTimer->start();
+		//m_watermarkTimer->stop(); 
 	}
 }
 

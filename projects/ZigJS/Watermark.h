@@ -17,9 +17,8 @@ public:
 private:
 	int m_token;
 	int m_tryCount;
-	static const int MaxAttempts = 3;
+	static const int MaxAttempts = 1000;
 
-	bool m_gotValidate; // did we get a validate for the last key?
 	bool m_ok; // are we okay?
 
 	FB::BrowserHostWeakPtr m_browser;

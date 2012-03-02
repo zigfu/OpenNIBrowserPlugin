@@ -1,5 +1,7 @@
 
 #include "Watermark.h"
+
+#ifndef NO_WATERMARK
 #include "BrowserHost.h"
 #include "DOM/Node.h"
 #include "DOM/Element.h"
@@ -226,4 +228,6 @@ void Watermark::Validate(int key)
 		m_lastValidationTime = boost::posix_time::second_clock::universal_time();
 	} //TODO: immediately fail otherwise?
 }
+#endif
+
 

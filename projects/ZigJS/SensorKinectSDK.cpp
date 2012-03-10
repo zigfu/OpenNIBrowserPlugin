@@ -340,16 +340,20 @@ static Json::Value OrientationToValue(float ori[9])
 {
 	Json::Value result(Json::arrayValue);
 	result.resize(9);
-	result[0u] = ori[0];
-	result[1u] = ori[3];
-	result[2u] = ori[6];
-	result[3u] = ori[1];
-	result[4u] = ori[4];
-	result[5u] = ori[7];
-	result[6u] = ori[2];
-	result[7u] = ori[5];
-	result[8u] = ori[8];
-	//result.assign(ori.elements, ori.elements + 9);
+	//result[0u] = ori[0];
+	//result[1u] = ori[3];
+	//result[2u] = ori[6];
+	//result[3u] = ori[1];
+	//result[4u] = ori[4];
+	//result[5u] = ori[7];
+	//result[6u] = ori[2];
+	//result[7u] = ori[5];
+	//result[8u] = ori[8];
+	// Unlike OpenNI, no need to transpose for matrices from Eigen 
+	for(int i = 0; i < 9; i++) {
+		result[i] = ori[i];
+	}
+
 	return result;
 }
 

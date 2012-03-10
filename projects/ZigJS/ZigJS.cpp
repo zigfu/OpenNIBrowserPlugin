@@ -130,7 +130,7 @@ SensorPtr ZigJS::InitSensor()
 void ZigJS::StaticInitialize()
 {
 	srand((unsigned)time(0));
-	s_sensor = InitSensor();
+	//s_sensor = InitSensor();
 	s_timer = FB::Timer::getTimer(30, true, &ZigJS::TimerCallback);
 	s_timer->start();
 }

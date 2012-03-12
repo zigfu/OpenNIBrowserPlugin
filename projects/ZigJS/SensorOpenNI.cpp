@@ -563,7 +563,7 @@ SensorOpenNI::SensorOpenNI() :
 		FBLOG_INFO("xnInit", "ok create production tree");
 	}
 	// make sure global mirror is on
-	xnSetGlobalMirror(m_pContext, true);
+	xnSetGlobalMirror(m_pContext, TRUE);
 
 	XnCallbackHandle ignore;
 	// register to gesture/hands callbacks

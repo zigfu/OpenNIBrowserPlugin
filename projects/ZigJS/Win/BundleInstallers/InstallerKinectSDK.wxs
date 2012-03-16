@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-<Bundle Name="ZigFu ZigJS Kinect For Windows Bundle" Version="1.0.0.0" Manufacturer="ZigFu" UpgradeCode="DB47C37E-03DC-43D8-B770-C2C9D82CA305" IconSourceFile="../icon.ico">
+<Bundle Name="ZigFu ZigJS Kinect For Windows Bundle" Version="1.0.1.0" Manufacturer="ZigFu" UpgradeCode="93934D68-30BE-4059-9A79-D0ADD9CE740B" IconSourceFile="../icon.ico">
 		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense" />
 		<WixVariable Id="WixStdbaLicenseRtf" Value="../license.rtf" />
 	    <!--<WixVariable Id="WixStdbaLogo" Value="../neonsquare.bmp"/>-->

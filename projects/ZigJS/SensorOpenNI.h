@@ -90,6 +90,7 @@ private:
 	XnNodeHandle m_image;
 	volatile bool m_initialized;
 	volatile bool m_error;
+	volatile bool m_imageOk;
 	XnLicense m_license;
 	
 	static void XN_CALLBACK_TYPE GestureRecognizedHandler(XnNodeHandle generator, const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition, void* pCookie);

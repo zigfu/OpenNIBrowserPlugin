@@ -6,105 +6,6 @@
 
 using namespace boost::assign;
 
-// TODO: MOVE OUT OF HERE
- 
-//
-//void base64_encode(std::string& outbuffer, const char * dp, unsigned int size)
-//{
-//  std::string::size_type remaining = size;
-//  int i = 0;
-//  while (remaining >= 3) {
-//    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
-//    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
-//    outbuffer[i+2] = base64_charset[((dp[1] & 0x0f) << 2) | ((dp[2] & 0xc0) >> 6)];
-//    outbuffer[i+3] = base64_charset[(dp[2] & 0x3f)];
-//    remaining -= 3; dp += 3; i+=4;
-//  }
-//  
-//  if (remaining == 2) {
-//    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
-//    outbuffer[i+1] = base64_charset[((dp[0] & 0x03) << 4) | ((dp[1] & 0xf0) >> 4)]; 
-//    outbuffer[i+2] = base64_charset[(dp[1] & 0x0f) << 2];
-//    outbuffer[i+3] = base64_charset[64];
-//  } else if (remaining == 1) {
-//    outbuffer[i] = base64_charset[(dp[0] & 0xfc) >> 2];
-//    outbuffer[i+1] = base64_charset[(dp[0] & 0x03) << 4]; 
-//    outbuffer[i+2] = base64_charset[64];
-//    outbuffer[i+3] = base64_charset[64];
-//  }
-//
-//}
-
-
-//
-//
-//// instead of understanding the format, we'll just replace the data from existing valid BMPs
-//// ugly as hell, but will work just fine
-//const unsigned char bitmap_header_qvga[] = {
-//							 0x42, 0x4D, 0x36, 0x84, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 
-//							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x40, 0x01, 
-//							 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
-//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x84, 0x03, 0x00, 0x00, 0x00, 
-//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-//							 0x00, 0x00, 0x00, 0x00
-//							 };
-//
-//const unsigned char bitmap_header_vga[] = {
-//							 0x42, 0x4D, 0x36, 0x10, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 
-//							 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x80, 0x02, 
-//							 0x00, 0x00, 0xE0, 0x01, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 
-//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00, 0x00, 0x00, 
-//							 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-//							 0x00, 0x00, 0x00, 0x00
-//							 };
-//// hack - bitmap headers are both the same length...
-//const unsigned long bmp_header_size = sizeof(bitmap_header_vga); 
-//
-//
-//boost::shared_ptr<std::string> bitmap_from_depth(const XnDepthMetaData* depth, const XnSceneMetaData* users)
-//{
-//	unsigned long totalLength = bmp_header_size + (depth->pMap->Res.X * depth->pMap->Res.Y * 3);
-//	bool VGA = depth->pMap->Res.X == 640;
-//
-//	unsigned char * outputBuffer = new unsigned char[totalLength];
-//	unsigned char * out = outputBuffer;
-//	// TODO: Code is ugly, I don't care much
-//	if (VGA) {
-//		memcpy(outputBuffer, bitmap_header_vga, sizeof(bitmap_header_vga));
-//		out += sizeof(bitmap_header_vga);
-//	} else {
-//		memcpy(outputBuffer, bitmap_header_qvga, sizeof(bitmap_header_qvga));
-//		out += sizeof(bitmap_header_qvga);
-//	}
-//
-//	// TODO: unused?
-//	//const XnDepthPixel maxDepth = SensorOpenNI::m_depth.GetDeviceMaxDepth();
-//
-//	// simple copy loop - bitmap has its rows upside down, so we have to invert the rows
-//	// invert rows copy loop
-//	for(long y = depth->pMap->Res.Y - 1; y >= 0 ; y--) {
-//
-//		const XnDepthPixel * in = depth->pData + depth->pMap->Res.X*y;
-//		// assume labelmap is the same resolution as the depth map
-//		const XnLabel * inUsers = users->pData + users->pMap->Res.X*y;
-//
-//		for(long x = 0;
-//			x < depth->pMap->Res.X;
-//			++x, out += 3, ++in, ++inUsers) {
-//				XnDepthPixel pix = *in;
-//				out[0] = (unsigned char)(*inUsers); // assuming we'll never pass 256 in the label
-//				out[1] = pix >> 8;
-//				out[2] = pix & 0xff;
-//			}
-//	}
-//	boost::shared_ptr<std::string> final = base64_encode((const char *)outputBuffer, totalLength);
-//	delete[] outputBuffer;
-//	return final;
-//}
-
-// END HUGE TODO
-
-
 const int MAX_USERS = 16;
 SensorPtr SensorOpenNI::s_activeInstance;
 SensorPtr SensorOpenNI::GetInstance()
@@ -467,7 +368,7 @@ void XN_CALLBACK_TYPE SensorOpenNI::ErrorCallback(XnStatus errorState, void *pCo
 }
 
 SensorOpenNI::SensorOpenNI() : 
-	m_initialized(false), m_error(false),
+	m_initialized(false), m_error(false), m_imageOk(false),
 	m_lastNewDataTime(0xFFFFFFFFFFFFFFFFULL),
 	m_pContext(NULL),
 	m_pSceneMD(NULL), m_pDepthMD(NULL), m_pImageMD(NULL),
@@ -554,13 +455,12 @@ SensorOpenNI::SensorOpenNI() :
 	}
 	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_IMAGE, NULL, &m_image, NULL);
 	if (nRetVal != XN_STATUS_OK) {
-		FBLOG_DEBUG("xnInit", "fail create production tree");
-		m_lastFrame = -6;
-		xnContextRelease(m_pContext);
-		m_pContext = NULL;
-		return;
+		m_image = NULL;
+		// fail "gracefully" for image node
+		FBLOG_DEBUG("xnInit", "fail create image node");
 	} else {
 		FBLOG_INFO("xnInit", "ok create production tree");
+		m_imageOk = true;
 	}
 	// make sure global mirror is on
 	xnSetGlobalMirror(m_pContext, TRUE);
@@ -622,7 +522,7 @@ SensorOpenNI::~SensorOpenNI()
 	}
 	if (NULL != m_pImageMD) {
 		xnFreeImageMetaData(m_pImageMD);
-		m_pDepthMD = NULL;
+		m_pImageMD = NULL;
 	}
 	if (NULL != m_hands) { 
 		xnProductionNodeRelease(m_hands);
@@ -630,7 +530,7 @@ SensorOpenNI::~SensorOpenNI()
 	}
 	if (NULL != m_users) { 
 		xnProductionNodeRelease(m_users);
-		m_hands = NULL;
+		m_users = NULL;
 	}
 	if (NULL != m_gestures) { 
 		xnProductionNodeRelease(m_gestures);
@@ -728,7 +628,7 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool updateLabe
 
 		m_depthJS = m_depthBuffer;
 	} // if (updateDepth)
-	if (updateImage) {
+	if (updateImage && m_imageOk) {
 		xnGetImageMetaData(m_image, m_pImageMD);
 		XnUInt32 xRatio = m_pImageMD->pMap->Res.X / MAP_XRES; // assume there's never going to up upscaling
 		XnUInt32 yRatio = m_pImageMD->pMap->Res.Y / MAP_YRES;
@@ -750,6 +650,9 @@ bool SensorOpenNI::ReadFrame(bool updateDepth, bool updateImage, bool updateLabe
 			
 		m_imageJS = m_imageBuffer;
 	}// if (updateImage)
+	if (!m_imageOk) {
+		m_imageJS = "";
+	}
 	//TODO: get 2d bounds per user when iterating over labelmap
 	if (updateLabelMap) {
 		XnUInt32 xRatio = m_pSceneMD->pMap->Res.X / MAP_XRES; // assume there's never going to up upscaling

@@ -773,3 +773,8 @@ FB::VariantList SensorOpenNI::convertImageToWorldSpace(const std::vector<double>
 	}
 	return vl;
 }
+
+void SensorOpenNI::StopTrackingPoint(int pointId)
+{
+	xnStopTracking(m_hands, pointId);
+}

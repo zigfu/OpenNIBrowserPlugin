@@ -41,6 +41,7 @@ public:
 	const std::string& GetEventData() const;
 	virtual FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
 	virtual FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);
+	virtual void StopTrackingPoint(int pointId);
 	static void Unload();
 	static bool Init();
 private:

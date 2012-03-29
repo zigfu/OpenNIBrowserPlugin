@@ -175,7 +175,12 @@ FB::VariantList ZigJS::ConvertWorldToImageSpace(const std::vector<double>& point
 	//TODO: throw some exception instead?
 	return FB::VariantList();
 }
-
+void ZigJS::SetHandRaise(bool enable)
+{
+	if (s_sensor) {
+		s_sensor->SetHandRaise(enable);
+	}
+}
 void ZigJS::StopTrackingPoint(int pointId)
 {
 	if (s_sensor) {

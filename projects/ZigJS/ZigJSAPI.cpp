@@ -56,6 +56,7 @@ ZigJSAPI::ZigJSAPI(const ZigJSPtr& plugin, const FB::BrowserHostPtr& host) : m_p
 	registerMethod("convertWorldToImageSpace", make_method(this, &ZigJSAPI::convertWorldToImageSpace));
 
 	registerMethod("stopTrackingPoint", make_method(this, &ZigJSAPI::stopTrackingPoint));
+	registerMethod("setHandRaise", make_method(this, &ZigJSAPI::setHandRaise));
 	// test every 7 secs or so
 	m_watermarkTimer = FB::Timer::getTimer(5000, true, boost::bind(&ZigJSAPI::WatermarkTimerCB, this));
 	m_watermarkTimer->start();
@@ -258,4 +259,9 @@ FB::VariantList ZigJSAPI::convertImageToWorldSpace(const std::vector<double>& po
 void ZigJSAPI::stopTrackingPoint(int pointId)
 {
 	ZigJS::StopTrackingPoint(pointId);
+}
+
+void ZigJSAPI::setHandRaise(bool enable)
+{
+	ZigJS::SetHandRaise(enable);
 }

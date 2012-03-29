@@ -42,6 +42,7 @@ public:
 	virtual FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
 	virtual FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);
 	virtual void StopTrackingPoint(int pointId);
+	virtual void SetHandRaise(bool enable);
 	static void Unload();
 	static bool Init();
 private:

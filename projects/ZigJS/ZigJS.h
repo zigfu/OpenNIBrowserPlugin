@@ -53,6 +53,7 @@ public:
 	static FB::VariantList ConvertImageToWorldSpace(const std::vector<double>& points);
 	static FB::VariantList ConvertWorldToImageSpace(const std::vector<double>& points);
 	static void StopTrackingPoint(int pointId);
+	static void SetHandRaise(bool enable);
 public:
     ZigJS();
     virtual ~ZigJS();

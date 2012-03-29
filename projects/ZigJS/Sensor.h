@@ -26,6 +26,7 @@ public:
 	virtual FB::VariantList convertImageToWorldSpace(const std::vector<double>& points) = 0;
 
 	virtual void StopTrackingPoint(int pointId) {}
+	virtual void SetHandRaise(bool enable) {}
 
 	//virtual const std::wstring& GetImage() {return std::wstring();}
 	// TODO: refactor

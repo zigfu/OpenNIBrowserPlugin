@@ -7,6 +7,8 @@
 using namespace boost::assign;
 
 const int MAX_USERS = 16;
+const char * RAISE_HAND = "RaiseHand";
+
 SensorPtr SensorOpenNI::s_activeInstance;
 SensorPtr SensorOpenNI::GetInstance()
 {
@@ -227,8 +229,22 @@ void XN_CALLBACK_TYPE SensorOpenNI::GestureRecognizedHandler(XnNodeHandle genera
 		instance->GestureRecognizedHandlerImpl(strGesture, pIDPosition, pEndPosition);
 	}
 }
+const float MIN_DISTANCE_FROM_EXISTING_POINTS = 300; // 30cm
 void SensorOpenNI::GestureRecognizedHandlerImpl(const XnChar* strGesture, const XnPoint3D* pIDPosition, const XnPoint3D* pEndPosition)
 {
+	if (xnOSStrCmp(strGesture, RAISE_HAND) == 0) {
+		// if it's a hand-raise, if the point doesn't belong to a user,  don't start tracking
+		if (WhichUserDoesThisPointBelongTo(*pEndPosition) == 0) return;
+	}
+	// check that the hand point isn't too close to existing points (so as to remove false positives for an already-tracked hand)
+	for(std::list<HandPoint>::iterator i = m_handpoints.begin(); i != m_handpoints.end(); i++) {
+		XnFloat distanceSqr = (i->position.X - pEndPosition->X)*(i->position.X - pEndPosition->X) +
+						(i->position.Y - pEndPosition->Y)*(i->position.Y - pEndPosition->Y) +
+						(i->position.Z - pEndPosition->Z)*(i->position.Z - pEndPosition->Z);
+		if (distanceSqr < MIN_DISTANCE_FROM_EXISTING_POINTS*MIN_DISTANCE_FROM_EXISTING_POINTS) {
+			return; // too close
+		}
+	}
 	xnStartTracking(m_hands, pEndPosition);
 }
 
@@ -777,4 +793,12 @@ FB::VariantList SensorOpenNI::convertImageToWorldSpace(const std::vector<double>
 void SensorOpenNI::StopTrackingPoint(int pointId)
 {
 	xnStopTracking(m_hands, pointId);
+}
+void SensorOpenNI::SetHandRaise(bool enable)
+{
+	if (enable) {
+		xnAddGesture(m_gestures, RAISE_HAND, NULL);
+	} else {
+		xnRemoveGesture(m_gestures, RAISE_HAND);
+	}
 }

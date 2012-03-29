@@ -64,6 +64,7 @@ public:
 	FB::VariantList convertWorldToImageSpace(const std::vector<double>& points);
 	FB::VariantList convertImageToWorldSpace(const std::vector<double>& points);
 	void stopTrackingPoint(int pointId);
+	void setHandRaise(bool enable);
 private:
 	ZigJSWeakPtr m_plugin;
     FB::BrowserHostPtr m_host;

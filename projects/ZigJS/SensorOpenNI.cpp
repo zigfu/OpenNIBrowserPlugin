@@ -181,16 +181,19 @@ Json::Value SensorOpenNI::MakeUsersJsonList()
 
 	// construct JS object
 	Json::Value jsUsers(Json::arrayValue);
-	jsUsers.resize(nUsers);
+	//jsUsers.resize(nUsers);
 	XnPoint3D pos;
+	int outIndex = 0;
 	for (int i = 0; i < nUsers; i++) {
+		if (m_usersOutOfScene.find(aUsers[i]) != m_usersOutOfScene.end()) continue; // skip 'out of scene' users
 		xnGetUserCoM(m_users, aUsers[i], &pos);
 		Json::Value user(Json::objectValue);
 		user["tracked"] = xnIsSkeletonTracking(m_users, aUsers[i]);
 		user["centerofmass"] = PositionToValue(pos);
 		user["id"] = aUsers[i];
 		user["joints"] = GetJointsJsonList(aUsers[i]);
-		jsUsers[i] = user;
+		jsUsers[outIndex] = user;
+		outIndex++;
 	}
 
 	return jsUsers;
@@ -311,6 +314,8 @@ void XN_CALLBACK_TYPE SensorOpenNI::OnNewUser(XnNodeHandle generator, const XnUs
 }
 void SensorOpenNI::OnNewUserImpl(const XnUserID nUserId)
 {
+	// just in case, make sure we won't be removing a new user
+	m_usersOutOfScene.erase(nUserId);
 	if (xnNeedPoseForSkeletonCalibration(m_users)) {
 		//std::string
 		xnStartPoseDetection(m_users, "Psi", nUserId);
@@ -328,7 +333,34 @@ void XN_CALLBACK_TYPE SensorOpenNI::OnLostUser(XnNodeHandle generator, const XnU
 }
 void SensorOpenNI::OnLostUserImpl(const XnUserID nUserId)
 {
+	m_usersOutOfScene.erase(nUserId); // in case sequence of events is New User -> User Exit -> User Lost
 }
+
+void XN_CALLBACK_TYPE SensorOpenNI::OnUserExit(XnNodeHandle generator, const XnUserID nUserId, void* pCookie)
+{
+	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
+	if (instance) {
+		instance->OnUserExitImpl(nUserId);
+	}
+}
+
+void XN_CALLBACK_TYPE SensorOpenNI::OnUserReEnter(XnNodeHandle generator, const XnUserID nUserId, void* pCookie)
+{
+	SensorOpenNI * instance = reinterpret_cast<SensorOpenNI *>(pCookie);
+	if (instance) {
+		instance->OnUserReEnterImpl(nUserId);
+	}
+}
+void SensorOpenNI::OnUserExitImpl(const XnUserID nUserId)
+{
+	m_usersOutOfScene.insert(nUserId);
+}
+
+void SensorOpenNI::OnUserReEnterImpl(const XnUserID nUserId)
+{
+	m_usersOutOfScene.erase(nUserId);
+}
+
 
 
 void XN_CALLBACK_TYPE SensorOpenNI::OnPoseDetected(XnNodeHandle poseDetection, const XnChar* strPose, XnUserID nId, void* pCookie)
@@ -472,7 +504,7 @@ SensorOpenNI::SensorOpenNI() :
 	nRetVal = xnCreateAnyProductionTree(m_pContext, XN_NODE_TYPE_IMAGE, NULL, &m_image, NULL);
 	if (nRetVal != XN_STATUS_OK) {
 		m_image = NULL;
-		// fail "gracefully" for image node
+		// fail "gracefully" for image node - just keep on going
 		FBLOG_DEBUG("xnInit", "fail create image node");
 	} else {
 		FBLOG_INFO("xnInit", "ok create production tree");
@@ -492,6 +524,8 @@ SensorOpenNI::SensorOpenNI() :
 	xnRegisterUserCallbacks(m_users, &SensorOpenNI::OnNewUser, 
 								  &SensorOpenNI::OnLostUser, 
 								  this, &ignore);
+	xnRegisterToUserReEnter(m_users, &SensorOpenNI::OnUserReEnter, this, &ignore);
+	xnRegisterToUserExit(m_users, &SensorOpenNI::OnUserExit, this, &ignore);
 	xnSetSkeletonProfile(m_users, XN_SKEL_PROFILE_ALL);
 	xnRegisterCalibrationCallbacks(m_users, &SensorOpenNI::OnCalibrationStart,
 														  &SensorOpenNI::OnCalibrationEnd,

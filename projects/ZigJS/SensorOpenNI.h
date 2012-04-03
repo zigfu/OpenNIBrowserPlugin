@@ -10,6 +10,8 @@
 #include "json/json.h"
 #include "Sensor.h"
 
+#include <set>
+
 //TODO: move away from header?
 class HandPoint
 {
@@ -66,6 +68,8 @@ private:
 	// we keep a list of hand points
 	std::list<HandPoint> m_handpoints;
 
+	std::set<XnUserID> m_usersOutOfScene;
+
 	Json::FastWriter m_writer;
 
 	//TODO: refactor these members into "result" object that encapsulates the per-frame data
@@ -107,6 +111,10 @@ private:
 	static void XN_CALLBACK_TYPE OnCalibrationStart(XnNodeHandle skeleton, const XnUserID nUserId, void* pCookie);
 	static void XN_CALLBACK_TYPE OnCalibrationEnd(XnNodeHandle skeleton, const XnUserID nUserId, XnBool bSuccess, void* pCookie);
 
+	// exit == user left the scene but not yet deleted, 
+	// re-enter is when a user in the "exited-but-not-lost" state re-enters the scene
+	static void XN_CALLBACK_TYPE OnUserExit(XnNodeHandle generator, const XnUserID nUserId, void* pCookie);
+	static void XN_CALLBACK_TYPE OnUserReEnter(XnNodeHandle generator, const XnUserID nUserId, void* pCookie);
 
 	// implementations - attached to an actual object instance
 	// UI callbacks
@@ -121,6 +129,9 @@ private:
 	void OnPoseDetectedImpl(XnNodeHandle poseDetection, const XnChar* strPose, XnUserID nId);
 	void OnCalibrationStartImpl(const XnUserID nUserId);
 	void OnCalibrationEndImpl(XnNodeHandle skeleton, const XnUserID nUserId, XnBool bSuccess);
+
+	void OnUserExitImpl(const XnUserID nUserId);
+	void OnUserReEnterImpl(const XnUserID nUserId);
 
 	static void XN_CALLBACK_TYPE ErrorCallback(XnStatus errorState, void *pCookie);
 	XnCallbackHandle m_errorCB;

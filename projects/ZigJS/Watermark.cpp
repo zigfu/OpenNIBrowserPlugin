@@ -17,7 +17,7 @@
 const boost::posix_time::time_duration Watermark::MaxDurationBetweenVerifications = boost::posix_time::time_duration(0, 0, 15, 0);
 
 // note that the <img> has style='border : none;' because IE otherwise adds a blue border around the image because it's a link
-static const char watermarkHTML[] = "<a href='http://site.zigfu.com/main/watermark'><img style='border : none;' alt='Powered by Zigfu' src='data:image/png;base64,"
+static const char watermarkHTML[] = "<a href='http://zigfu.com/watermark'><img style='border : none;' alt='Powered by Zigfu' src='data:image/png;base64,"
 "iVBORw0KGgoAAAANSUhEUgAAAKEAAABhCAMAAACJZzEwAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ"
 "bWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdp"
 "bj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6"
@@ -77,7 +77,7 @@ static const char watermarkHTML[] = "<a href='http://site.zigfu.com/main/waterma
 "ebHCYl4nNoQKcx9sV0q5Y+9LxISQP6eEvGLcXDs0BLNOfAj5b+/yMSLkbsEOa4wHe7/sf81tDE2D"
 "g74Bd/+rgKFKIG6EaO5SNZxia6oChiqx/8bnKUq4M7aEOynhRGwJJ56Y7/W2jcUTcfeY47vRie2x"
 "49sx4fhuNObf3o7EXeJP+B+E/6d7/EfaCAAAAABJRU5ErkJggg==" // end of base64 encoded image
-"' onload='(function(a){var b=new XMLHttpRequest;b.open(\"GET\",\"http://site.zigfu.com/main/plugin?v=" FBSTRING_PLUGIN_VERSION "\",true);b.onreadystatechange=function(){if(b.readyState==4&&b.status==200){var c=document.createElement(\"div\");c.innerHTML=b.responseText;a.appendChild(c);}};b.send()}(this.parentElement.parentElement))'></a>";
+"' onload='(function(a){var b=new XMLHttpRequest;b.open(\"GET\",\"http://zigfu.com/watermark?v=" FBSTRING_PLUGIN_VERSION "\",true);b.onreadystatechange=function(){if(b.readyState==4&&b.status==200){var c=document.createElement(\"div\");c.innerHTML=b.responseText;a.appendChild(c);}};b.send()}(this.parentElement.parentElement))'></a>";
 static const char watermarkStyle[] = "position:fixed;display:block;left:10px;bottom:10px;z-index:65535;";
 const int VERIFY_WATERMARK_TIME = 1000;
 Watermark::Watermark(FB::BrowserHostPtr browserPtr)

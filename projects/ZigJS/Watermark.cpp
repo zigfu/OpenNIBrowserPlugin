@@ -137,7 +137,8 @@ bool Watermark::IsOk()
 	return m_ok;
 }
 
-static const char * verificationFunction = "function alpha(elem) {"
+static const char * verificationFunction = "(function() {" // wrap in an anonymous function to stop leaking variables
+"function alpha(elem) {"
 "  var opacity = elem.style.opacity;"
 "  if (!opacity) { "
 "    opacity = 1;"
@@ -191,7 +192,8 @@ static const char * verificationFunction = "function alpha(elem) {"
 "        o.validate(%1%);" // %1% will be set to m_token
 "    }"
 "    break;"
-"}";
+"}"
+"})();"; // end of anonymous function wrapping everything
 
 bool Watermark::Test()
 {
